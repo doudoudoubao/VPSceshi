@@ -117,7 +117,7 @@ EOF
 
 _run_node_list() {
   local table="$1" list="$2" limit="$3"
-  local n=0 line label kw fbid sid res
+  local n=0 label kw fbid sid res
   while IFS='|' read -r label kw fbid; do
     [ -z "$label" ] && continue
     [ "$limit" -gt 0 ] && [ "$n" -ge "$limit" ] && break
@@ -142,15 +142,26 @@ _run_node_list() {
 }
 
 test_speedtest() {
-  module_enabled speedtest || { log_info "跳过测速"; return 0; }
-  [ "$SPEEDTEST_MODE" = "off" ] && { log_info "已禁用测速"; return 0; }
+  module_enabled speedtest || { log_info "跳过测速"
+    skip_note "$SKIP_REASON_OPT" speed_auto speed_cn speed_gl; return 0; }
+  if [ "$SPEEDTEST_MODE" = "off" ]; then
+    log_info "已禁用测速"
+    skip_note "本次未运行测速（--speedtest off）" speed_auto speed_cn speed_gl
+    return 0
+  fi
+
+  # 只测了一边时，另一边要说清是「没测」而不是「测了没结果」
+  case "$SPEEDTEST_MODE" in
+    cn)     skip_note "本次只测了国内节点（--speedtest cn），未测国际节点" speed_gl ;;
+    global) skip_note "本次只测了国际节点（--speedtest global），未测国内三网" speed_cn ;;
+  esac
 
   step "三网 / 国际节点测速"
   log_warn "测速会消耗较多流量（每节点约 100-500MB），如流量敏感请用 --speedtest off"
 
   if ! install_speedtest; then
     log_warn "Speedtest CLI 不可用，跳过测速"
-    row_add speed_cn "测速" "Speedtest CLI 不可用" "" "" "" ""
+    skip_note "Speedtest CLI 下载失败或不支持当前架构，测速未执行" speed_auto speed_cn speed_gl
     return 0
   fi
 
@@ -178,4 +189,13 @@ test_speedtest() {
       _run_node_list speed_gl "$(_st_nodes_global)" "$limit"
       ;;
   esac
+
+  # 跑了但一行结果都没有，这时才是真正的「未取得有效数据」
+  case "$SPEEDTEST_MODE" in
+    cn|all)     rows_have speed_cn || na_set speed_cn "本次未取得有效数据：测速节点均未返回有效结果" ;;
+  esac
+  case "$SPEEDTEST_MODE" in
+    global|all) rows_have speed_gl || na_set speed_gl "本次未取得有效数据：测速节点均未返回有效结果" ;;
+  esac
+  rows_have speed_auto || na_set speed_auto "本次未取得有效数据：就近节点测速未返回结果"
 }

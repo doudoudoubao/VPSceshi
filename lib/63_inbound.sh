@@ -155,7 +155,8 @@ _summarize_route() {
 }
 
 test_inbound() {
-  module_enabled inbound || { log_info "跳过去程测试"; return 0; }
+  module_enabled inbound || { log_info "跳过去程测试"
+    skip_note "$SKIP_REASON_OPT" inbound_isp inbound_region inbound_route inbound_mtr; return 0; }
   step "去程延迟 / 去程路由 / 去程 MTR（国内 → VPS）"
 
   # --- 去程延迟 ---

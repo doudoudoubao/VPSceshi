@@ -37,7 +37,7 @@ bb_kv() { printf '[tr][td][b]%s[/b][/td][td]%s[/td][/tr]\n' "$1" "$(bb_plain "$2
 bb_na() {
   local key="$1"
   na_has "$key" || return 1
-  printf '[color=#b45309][b]本次未取得有效数据：[/b]%s[/color]\n\n' "$(bb_plain "$(na_get "$key")")"
+  printf '[color=#b45309][b][?] [/b]%s[/color]\n\n' "$(bb_plain "$(na_get "$key")")"
   return 0
 }
 
@@ -169,7 +169,7 @@ gen_bbcode() {
   if rows_have speed_cn; then
     bb_table speed_cn "节点" "下载" "上传" "延迟" "抖动" "服务器"
   else
-    printf '[color=#b45309][b]本次未取得有效数据：[/b]国内测速节点未返回有效结果。[/color]\n\n'
+    bb_na speed_cn || printf '本节未测试。\n\n'
   fi
   rows_have ping_cn && { bb_h2 "回程延迟 · 国内三网（均值 $(kv_or ping.cn.avg 'N/A') ms）"
     bb_table ping_cn "节点" "线路" "平均延迟" "丢包率"; }
@@ -193,7 +193,7 @@ gen_bbcode() {
     bb_table unlock6 "服务" "结果"
   else
     bb_h2 "IPv6 结果"
-    printf '%s\n\n' "$(kv_or unlock.v6.summary '本次未检测')"
+    bb_na unlock6 || printf '%s\n\n' "$(kv_or unlock.v6.summary '本次未检测')"
   fi
 
   # ===== 十、IP 质量 =====

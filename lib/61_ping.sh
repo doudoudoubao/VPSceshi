@@ -75,7 +75,8 @@ _run_ping_list() {
 }
 
 test_ping() {
-  module_enabled ping || { log_info "跳过延迟测试"; return 0; }
+  module_enabled ping || { log_info "跳过延迟测试"
+    skip_note "$SKIP_REASON_OPT" ping_cn ping_gl; return 0; }
   if ! have ping; then
     log_warn "系统缺少 ping 命令，跳过延迟测试"
     return 0

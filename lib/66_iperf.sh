@@ -49,7 +49,8 @@ _iperf_run() {
 }
 
 test_iperf() {
-  module_enabled iperf || { log_info "跳过国际带宽测试"; return 0; }
+  module_enabled iperf || { log_info "跳过国际带宽测试"
+    skip_note "$SKIP_REASON_OPT" iperf; return 0; }
   # 默认不跑：每节点 1-3GB 流量，得用户明确开启
   if [ "$ENABLE_IPERF" != "1" ]; then
     na_set iperf "本次未启用国际带宽测试（流量消耗大，用 --iperf 或 --full 开启）"
@@ -101,5 +102,5 @@ test_iperf() {
     fi
   done <<< "$(_iperf_nodes)"
 
-  rows_have iperf || na_set iperf "所有公共 iperf3 节点均未连通，国际带宽未取得有效数据"
+  rows_have iperf || na_set iperf "本次未取得有效数据：所有公共 iperf3 节点均未连通"
 }

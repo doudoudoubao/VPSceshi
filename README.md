@@ -283,7 +283,7 @@ VPSceshi/
 │   ├── 73_report_json.sh   # JSON / TXT 报告
 │   ├── 74_report_nodeseek.sh # NodeSeek 专用排版（tabs / details 容器）
 │   └── 90_main.sh          # 参数解析与主流程
-├── tests/gen_sample.sh     # 用样例数据跑通全部报告路径并校验（56 项断言）
+├── tests/gen_sample.sh     # 用样例数据跑通全部报告路径并校验（64 项断言）
 ├── examples/               # 配置文件与去程导入的示例
 └── docs/
     ├── import-format.md    # 去程数据与配置文件的格式说明

@@ -28,7 +28,7 @@ md_kv_row() { printf '| %s | %s |\n' "$1" "$2"; }
 md_na() {
   local key="$1"
   na_has "$key" || return 1
-  printf '> ⚠️ **本次未取得有效数据**：%s\n\n' "$(na_get "$key")"
+  printf '> ⚠️ %s\n\n' "$(na_get "$key")"
   return 0
 }
 
@@ -42,18 +42,34 @@ gen_markdown() {
   local title
   title="$(kv_or meta.node_name "$(kv_get sys.cpu.model)")"
 
-  cat <<EOF
-# ${title} 服务器测评报告
+  printf '# %s 服务器测评报告\n\n' "$title"
 
-> 测试时间：**$(kv_get meta.time_local)**（$(kv_get meta.time_utc)）
-> 测试工具：[${VPSTEST_NAME} v${VPSTEST_VERSION}](${VPSTEST_REPO})
-> 出口位置：$(kv_get net.location) · $(kv_or net.as '未知 ASN')
+  # 摘要先行：读者扫一眼就能拿到结论，细节再往下翻
+  printf '> **测试时间**：%s（%s）\n' "$(kv_get meta.time_local)" "$(kv_get meta.time_utc)"
+  printf '> **出口位置**：%s · %s\n' "$(kv_get net.location)" "$(kv_or net.as '未知 ASN')"
+  [ -n "$(kv_get profile.vendor)" ] &&
+    printf '> **商家套餐**：%s %s%s ｜ %s\n' \
+      "$(kv_get profile.vendor)" "$(kv_get profile.plan)" \
+      "$([ -n "$(kv_get profile.dc)" ] && printf ' @ %s' "$(kv_get profile.dc)")" \
+      "$(kv_or profile.price '价格未填')"
+  printf '> **配置**：%s × %s 核 ｜ 内存 %s ｜ 硬盘 %s\n' \
+    "$(kv_get sys.cpu.model)" "$(kv_get sys.cpu.cores)" \
+    "$(kv_get sys.mem.total)" "$(printf '%s' "$(kv_get sys.disk.summary)" | awk -F' / ' '{print $2}')"
+  [ -n "$(kv_get score.total)" ] &&
+    printf '> **综合评分**：**%s / 100** — %s\n' "$(kv_get score.total)" "$(kv_get score.grade)"
+  [ -n "$(kv_get route.verdict)" ] &&
+    printf '> **回程线路**：%s\n' "$(kv_get route.verdict)"
+  [ -n "$(kv_get inbound.route_verdict)" ] &&
+    printf '> **去程线路**：%s\n' "$(kv_get inbound.route_verdict)"
+  [ -n "$(kv_get ping.cn.avg)" ] &&
+    printf '> **国内延迟**：平均 %s ms\n' "$(kv_get ping.cn.avg)"
+  [ -n "$(kv_get unlock.v4.summary)" ] &&
+    printf '> **解锁通过率**：%s（IPv4）\n' "$(kv_get unlock.v4.summary)"
+  [ -n "$(kv_get ipq.native)" ] &&
+    printf '> **IP 类型**：%s\n' "$(kv_get ipq.native)"
+  printf '> **测试工具**：[%s v%s](%s)\n\n' "$VPSTEST_NAME" "$VPSTEST_VERSION" "$VPSTEST_REPO"
 
----
-
-## 📊 综合评分
-
-EOF
+  printf -- '---\n\n## 📊 综合评分\n\n'
 
   if rows_have score; then
     printf '**总分：%s / 100 —— %s**\n\n' "$(kv_get score.total)" "$(kv_get score.grade)"
@@ -208,7 +224,7 @@ EOF
   if rows_have speed_cn; then
     md_table speed_cn "节点" "下载" "上传" "延迟" "抖动" "服务器"
   else
-    printf '> ⚠️ **本次未取得有效数据**：国内测速节点未返回有效结果。\n\n'
+    md_na speed_cn || printf '> 本节未测试。\n\n'
   fi
   if rows_have ping_cn || rows_have ping_gl; then
     printf '### 8.4 回程延迟与丢包（VPS → 各地）\n\n'
@@ -240,7 +256,8 @@ EOF
     printf '### 9.3 IPv6 结果（通过率 %s）\n\n' "$(kv_or unlock.v6.summary 'N/A')"
     md_table unlock6 "服务" "结果"
   else
-    printf '### 9.3 IPv6 结果\n\n> %s\n\n' "$(kv_or unlock.v6.summary '本次未检测')"
+    printf '### 9.3 IPv6 结果\n\n'
+    md_na unlock6 || printf '> %s\n\n' "$(kv_or unlock.v6.summary '本次未检测')"
   fi
 
   # ========== 十、IP 质量 ==========
@@ -258,7 +275,7 @@ EOF
     rows_have ipq_port && { printf '### 10.6 出站端口与连通性\n\n'; md_table ipq_port "检测项" "结果"; }
     printf '> **综合判断**：%s——%s\n\n' "$(kv_or ipq.native '未判定')" "$(kv_or ipq.native_reason '')"
   else
-    printf '> 本节未测试。\n\n'
+    md_na ipq_base || printf '> 本节未测试。\n\n'
   fi
 
   # ========== 十一、适用场景与购买建议 ==========

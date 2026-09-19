@@ -35,7 +35,8 @@ _mtr_parse() {
 }
 
 test_mtr() {
-  module_enabled mtr || { log_info "跳过 MTR 测试"; return 0; }
+  module_enabled mtr || { log_info "跳过 MTR 测试"
+    skip_note "$SKIP_REASON_OPT" mtr_out; return 0; }
   step "回程 MTR（丢包 / 抖动）"
 
   if ! have mtr; then
@@ -73,5 +74,5 @@ test_mtr() {
     fi
   done <<< "$(_mtr_targets)"
 
-  rows_have mtr_out || na_set mtr_out "回程 MTR 未取得有效数据"
+  rows_have mtr_out || na_set mtr_out "本次未取得有效回程 MTR 数据"
 }

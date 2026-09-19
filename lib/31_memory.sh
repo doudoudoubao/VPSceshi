@@ -13,7 +13,8 @@ _sysbench_mem() {
 }
 
 test_memory() {
-  module_enabled memory || { log_info "跳过内存测试"; return 0; }
+  module_enabled memory || { log_info "跳过内存测试"
+    skip_note "$SKIP_REASON_OPT" memory; return 0; }
   step "内存性能测试"
 
   if have sysbench; then

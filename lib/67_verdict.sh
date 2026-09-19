@@ -31,7 +31,7 @@ build_verdict() {
   module_enabled verdict || return 0
   step "适用场景与购买建议"
 
-  local cn_lat net_dl disk_w cpu_s ul_ok
+  local cn_lat net_dl disk_w cpu_s
   cn_lat="$(kv_get ping.cn.avg)"
   net_dl="$(kv_get speed.auto.down)"
   disk_w="$(kv_get disk.dd.write_avg)"

@@ -49,7 +49,7 @@ html_section_end() { printf '</section>\n'; }
 html_na() {
   local key="$1"
   na_has "$key" || return 1
-  printf '<p class="na">⚠️ <b>本次未取得有效数据</b>：%s</p>' "$(html_escape "$(na_get "$key")")"
+  printf '<p class="na">⚠️ %s</p>' "$(html_escape "$(na_get "$key")")"
   return 0
 }
 
@@ -116,6 +116,20 @@ pre{background:var(--code);border:1px solid var(--line);border-radius:8px;
   padding:12px;overflow-x:auto;font-size:12.5px;line-height:1.5}
 details{margin:10px 0}
 summary{cursor:pointer;color:var(--accent);font-size:14px;padding:4px 0}
+.summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1px;
+  background:var(--line);border:1px solid var(--line);border-radius:14px;
+  overflow:hidden;margin:0 0 20px}
+.summary .si{background:var(--card);padding:12px 14px;min-width:0}
+.summary .si span{display:block;color:var(--muted);font-size:12px;margin-bottom:2px}
+.summary .si b{font-size:14px;word-break:break-word}
+.toc{background:var(--card);border:1px solid var(--line);border-radius:14px;
+  padding:14px 20px;margin:0 0 20px}
+.toc b{font-size:14px}
+.toc ol{margin:8px 0 0;padding-left:20px;columns:2;column-gap:24px;font-size:14px}
+.toc li{margin:3px 0;break-inside:avoid}
+.toc a{text-decoration:none}
+.toc a:hover{text-decoration:underline}
+section{scroll-margin-top:16px}
 .na{background:color-mix(in srgb, var(--warn) 12%, transparent);
   border-left:3px solid var(--warn);border-radius:0 8px 8px 0;
   padding:10px 14px;margin:10px 0;font-size:14px}
@@ -129,6 +143,8 @@ a{color:var(--accent)}
   .score .big{font-size:32px}
   table{font-size:13px}
   table.kv th{width:110px}
+  .toc ol{columns:1}
+  .summary{grid-template-columns:repeat(auto-fit,minmax(140px,1fr))}
 }
 </style>
 CSSEOF
@@ -139,6 +155,22 @@ CSSEOF
     "$(html_escape "$(kv_get meta.time_local)")" \
     "$(html_escape "$(kv_get net.location)")" \
     "$(html_escape "$(kv_or net.as '未知 ASN')")"
+
+  # ---- 摘要条：先给结论 ----
+  printf '<div class="summary">'
+  _sum_item() { [ -n "$2" ] && printf '<div class="si"><span>%s</span><b>%s</b></div>' \
+    "$(html_escape "$1")" "$(html_escape "$2")"; }
+  _sum_item "配置" "$(kv_get sys.cpu.cores) 核 / $(kv_get sys.mem.total) / $(printf '%s' "$(kv_get sys.disk.summary)" | awk -F' / ' '{print $2}')"
+  _sum_item "商家套餐" "$([ -n "$(kv_get profile.vendor)" ] && printf '%s %s' "$(kv_get profile.vendor)" "$(kv_get profile.plan)")"
+  _sum_item "价格"     "$(kv_get profile.price)"
+  _sum_item "国内延迟" "$([ -n "$(kv_get ping.cn.avg)" ] && printf '%s ms' "$(kv_get ping.cn.avg)")"
+  _sum_item "就近下行" "$([ -n "$(kv_get speed.auto.down)" ] && printf '%s Mbps' "$(kv_get speed.auto.down)")"
+  _sum_item "解锁通过率" "$(kv_get unlock.v4.summary)"
+  _sum_item "IP 类型"  "$(kv_get ipq.native)"
+  _sum_item "回程线路" "$(kv_get route.verdict)"
+  _sum_item "去程线路" "$(kv_get inbound.route_verdict)"
+  unset -f _sum_item
+  printf '</div>\n'
 
   # ---- 评分卡 ----
   if rows_have score; then
@@ -156,6 +188,22 @@ CSSEOF
     done <<< "$(rows_get score)"
     printf '</div></div>\n'
   fi
+
+  # ---- 目录：12 章的页面太长，给个锚点导航 ----
+  printf '<nav class="toc"><b>目录</b><ol>'
+  printf '<li><a href="#profile">基本配置核对</a></li>'
+  printf '<li><a href="#perf">性能与硬件检测</a></li>'
+  printf '<li><a href="#inbound">去程延迟</a></li>'
+  printf '<li><a href="#inroute">去程路由</a></li>'
+  printf '<li><a href="#inmtr">去程 MTR</a></li>'
+  printf '<li><a href="#netq">回程网络质量</a></li>'
+  printf '<li><a href="#route">回程路由</a></li>'
+  printf '<li><a href="#speed">网络测速</a></li>'
+  printf '<li><a href="#unlock">流媒体解锁</a></li>'
+  printf '<li><a href="#ipq">IP 质量检测</a></li>'
+  printf '<li><a href="#verdict">适用场景与建议</a></li>'
+  printf '<li><a href="#raw">原始结果归档</a></li>'
+  printf '</ol></nav>\n'
 
 
   # ===== 一、基本配置核对 =====
@@ -285,7 +333,7 @@ CSSEOF
   if rows_have speed_cn; then
     html_table speed_cn "节点" "下载" "上传" "延迟" "抖动" "服务器"
   else
-    printf '<p class="na">⚠️ <b>本次未取得有效数据</b>：国内测速节点未返回有效结果。</p>'
+    html_na speed_cn || printf '<p class="na">本节未测试。</p>'
   fi
   rows_have ping_cn && { printf '<h3>回程延迟 · 国内三网（均值 %s ms）</h3>' "$(html_escape "$(kv_or ping.cn.avg 'N/A')")"
     html_table ping_cn "节点" "线路" "平均延迟" "丢包率"; }
@@ -312,7 +360,8 @@ CSSEOF
     printf '<h3>IPv6 结果（通过率 %s）</h3>' "$(html_escape "$(kv_or unlock.v6.summary 'N/A')")"
     html_table unlock6 "服务" "结果"
   else
-    printf '<h3>IPv6 结果</h3><p class="na">%s</p>' "$(html_escape "$(kv_or unlock.v6.summary '本次未检测')")"
+    printf '<h3>IPv6 结果</h3>'
+    html_na unlock6 || printf '<p class="na">%s</p>' "$(html_escape "$(kv_or unlock.v6.summary '本次未检测')")"
   fi
   html_section_end
 
@@ -329,7 +378,7 @@ CSSEOF
     printf '<p><b>综合判断：</b>%s——%s</p>' \
       "$(html_escape "$(kv_or ipq.native '未判定')")" "$(html_escape "$(kv_or ipq.native_reason '')")"
   else
-    printf '<p class="na">本节未测试。</p>'
+    html_na ipq_base || printf '<p class="na">本节未测试。</p>'
   fi
   html_section_end
 

@@ -78,6 +78,14 @@ row_add profile_cmp "IPv4 数量" "1"     "1 个"       "✅ 相符"
 row_add profile_cmp "IPv6 数量" "1"     "1 个"       "✅ 相符"
 kv_set profile.price "9.90 AUD / 月付"
 kv_set profile.traffic "1TB"
+# 真实流程里这些由 collect_profile 写入，摘要块要用
+kv_set profile.vendor "DMIT"
+kv_set profile.plan   "HKG.AN5.EB.Tiny"
+kv_set profile.dc     "中国香港 HKG"
+kv_set profile.line   "三网优化 / 去程直连回程 CN2 GIA"
+kv_set profile.bandwidth "1Gbps"
+kv_set profile.ip4_count "1"
+kv_set profile.ip6_count "1"
 
 # CPU
 row_add cpu "sysbench 单核"          "1462.38 events/s"
@@ -367,6 +375,20 @@ check "含 BGP 前缀"            "grep -q '154.31.112.0/24' '$OUT/sample-report
 check "含 FAQ"                 "grep -q '数据会变吗\|这些数据会变吗' '$OUT/sample-report.md'"
 check "含 Geekbench 链接"      "grep -q 'browser.geekbench.com' '$OUT/sample-report.md'"
 check "TXT 含 12 章"           "[ \$(grep -c '^\[ [一二三四五六七八九十]' '$OUT/sample-report.txt') -eq 12 ]"
+# 摘要块与目录：读者先拿结论，长页面要能跳转
+check "MD 摘要含商家套餐"   "grep -q '商家套餐.*DMIT' '$OUT/sample-report.md'"
+check "MD 摘要含回程线路"   "grep -q '回程线路.*CN2 GIA' '$OUT/sample-report.md'"
+check "MD 摘要含解锁通过率" "grep -q '解锁通过率' '$OUT/sample-report.md'"
+check "HTML 有摘要条"       "grep -q 'class=\"summary\"' '$OUT/sample-report.html'"
+check "HTML 有目录"         "grep -q 'class=\"toc\"' '$OUT/sample-report.html'"
+check "HTML 目录锚点齐全"   "[ \$(grep -o 'href=\"#[a-z]*\"' '$OUT/sample-report.html' | sort -u | wc -l) -eq 12 ]"
+# 目录里每个锚点都必须真有对应的 section，否则点了跳不动
+check "HTML 锚点都有对应章节" '
+  for a in $(grep -o "href=\"#[a-z]*\"" "'"$OUT"'/sample-report.html" | sed "s/.*#//; s/\"//"); do
+    grep -q "<section id=\"$a\"" "'"$OUT"'/sample-report.html" || exit 1
+  done'
+# 「未运行」和「未取得」不能混为一谈
+check "报告无自相矛盾措辞"  "! grep -q '未取得有效数据：本次未运行' '$OUT/sample-report.md'"
 
 # ---------- NodeSeek 版：容器嵌套必须闭合，否则整贴排版崩掉 ----------
 NS="$OUT/sample-report.nodeseek.md"

@@ -56,7 +56,7 @@ ns_tab_table() {
 ns_na() {
   local key="$1"
   na_has "$key" || return 1
-  printf '> ⚠️ **本次未取得有效数据**：%s\n\n' "$(na_get "$key")"
+  printf '> ⚠️ %s\n\n' "$(na_get "$key")"
   return 0
 }
 
@@ -238,7 +238,7 @@ gen_nodeseek() {
   fi
   ns_tabs_close
   rows_have iperf    || ns_na iperf
-  rows_have speed_cn || printf '> ⚠️ **国内测速本次未取得有效数据**。\n\n'
+  rows_have speed_cn || ns_na speed_cn
 
   # ========== 九、流媒体解锁 ==========
   printf '## 九、流媒体与在线服务解锁\n\n'
@@ -281,7 +281,7 @@ gen_nodeseek() {
     ns_tab_table "端口与连通性" ipq_port "检测项" "结果"
     ns_tabs_close
   else
-    printf '> 本节未测试。\n\n'
+    ns_na ipq_base || printf '> 本节未测试。\n\n'
   fi
 
   # ========== 十一、适用场景与购买建议 ==========

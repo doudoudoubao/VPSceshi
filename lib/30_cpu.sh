@@ -13,7 +13,8 @@ _sysbench_cpu() {
 }
 
 test_cpu() {
-  module_enabled cpu || { log_info "跳过 CPU 测试"; return 0; }
+  module_enabled cpu || { log_info "跳过 CPU 测试"
+    skip_note "$SKIP_REASON_OPT" cpu; return 0; }
   step "CPU 性能测试"
 
   local cores secs

@@ -34,11 +34,14 @@ _rbl_check() {
 }
 
 test_ipquality() {
-  module_enabled ipquality || { log_info "跳过 IP 质量体检"; return 0; }
+  module_enabled ipquality || { log_info "跳过 IP 质量体检"
+    skip_note "$SKIP_REASON_OPT" ipq_base ipq_native ipq_type ipq_risk ipq_rbl ipq_port; return 0; }
   step "IP 质量体检"
 
   if [ -z "$IP4" ]; then
     log_warn "无 IPv4 出口，跳过 IP 质量体检"
+    skip_note "本机无 IPv4 公网出口，IP 质量无法检测" \
+      ipq_base ipq_native ipq_type ipq_risk ipq_rbl ipq_port
     return 0
   fi
 
@@ -215,7 +218,12 @@ test_ipquality() {
   local svc
   for svc in "www.google.com:443:Google" "github.com:443:GitHub" \
              "registry.npmjs.org:443:npm" "hub.docker.com:443:DockerHub"; do
-    local h="${svc%%:*}" rest="${svc#*:}" port="${rest%%:*}" name="${rest#*:}"
+    # 必须分开写：同一条 local 里后面的变量拿不到前面刚赋的值，
+    # 写在一行的话 port 和 name 会是空的
+    local h="${svc%%:*}"
+    local rest="${svc#*:}"
+    local port="${rest%%:*}"
+    local name="${rest#*:}"
     if _port_open "$h" "$port" 5; then
       row_add ipq_port "$name ($h:$port)" "✅ 可达"
     else

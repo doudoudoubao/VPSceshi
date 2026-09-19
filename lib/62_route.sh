@@ -89,7 +89,8 @@ _guess_line() {
 }
 
 test_route() {
-  module_enabled route || { log_info "跳过路由追踪"; return 0; }
+  module_enabled route || { log_info "跳过路由追踪"
+    skip_note "$SKIP_REASON_OPT" route; return 0; }
   step "三网回程路由追踪"
 
   if [ "$(id -u)" != "0" ]; then
@@ -98,6 +99,7 @@ test_route() {
   install_nexttrace || true
   if [ -z "$NT_BIN" ] && ! have mtr && ! have traceroute && ! have tracepath; then
     log_warn "无可用的路由追踪工具，跳过"
+    skip_note "系统无可用的路由追踪工具（nexttrace / mtr / traceroute 均不可用）" route
     return 0
   fi
 
@@ -123,6 +125,6 @@ test_route() {
     _summarize_route route route.verdict
     [ -n "$(kv_get route.verdict)" ] && log_ok "回程线路：$(kv_get route.verdict)"
   else
-    na_set route "回程路由未取得有效数据"
+    na_set route "本次未取得有效回程路由数据（追踪工具不可用或全部超时）"
   fi
 }

@@ -1,8 +1,16 @@
 # DMIT HKG.AN5.EB.Tiny 服务器测评报告
 
-> 测试时间：**2026-09-19 16:20:31 CST**（2026-09-19 08:20:31 UTC）
-> 测试工具：[VPSceshi v1.0.0](https://github.com/doudoudoubao/VPSceshi)
-> 出口位置：中国香港 Hong Kong · AS3335 DMIT
+> **测试时间**：2026-09-19 16:20:31 CST（2026-09-19 08:20:31 UTC）
+> **出口位置**：中国香港 Hong Kong · AS3335 DMIT
+> **商家套餐**：DMIT HKG.AN5.EB.Tiny @ 中国香港 HKG ｜ 9.90 AUD / 月付
+> **配置**：Intel(R) Xeon(R) Platinum 8375C CPU @ 2.90GHz × 1 核 ｜ 内存 984.27 MB ｜ 硬盘 19.56 GB
+> **综合评分**：**86.8 / 100** — S 级 · 优秀
+> **回程线路**：CN2 GIA (AS4809/59.43)；联通 A网 CUII (AS9929)；移动 CMIN2 (AS58807)
+> **去程线路**：电信 CN2 GIA (AS4809) / 电信 163 骨干 (AS4134)；联通 169 骨干 (AS4837)；移动 CMI (AS58453) / 移动 CMNET (AS9808)
+> **国内延迟**：平均 39.8 ms
+> **解锁通过率**：25/37（IPv4）
+> **IP 类型**：📡 广播 IP
+> **测试工具**：[VPSceshi v1.0.0](https://github.com/doudoudoubao/VPSceshi)
 
 ---
 
@@ -191,7 +199,7 @@
 
 ## 五、去程 MTR
 
-> ⚠️ **本次未取得有效数据**：本次未取得有效去程 MTR 数据，丢包与抖动未评估
+> ⚠️ 本次未取得有效去程 MTR 数据，丢包与抖动未评估
 
 ---
 

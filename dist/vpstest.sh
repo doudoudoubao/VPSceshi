@@ -8,7 +8,7 @@
 # 一键运行：
 #   bash <(curl -sL https://github.com/doudoudoubao/VPSceshi/raw/main/dist/vpstest.sh)
 #
-# 生成时间： 2026-09-19 12:54:59 UTC
+# 生成时间： 2026-09-19 15:28:48 UTC
 # ============================================================
 
 set -o pipefail
@@ -72,7 +72,6 @@ step() {
 # ---------- 结果存储 ----------
 declare -A KV      # 单值：KV[section.key]=value
 declare -A ROWS    # 表格：ROWS[table]=多行，字段以 | 分隔
-declare -a RAWLOGS # 原始输出片段（路由等）
 
 kv_set() { KV["$1"]="$2"; }
 kv_get() { printf '%s' "${KV[$1]-}"; }
@@ -171,7 +170,10 @@ calc() {
   fi
   [ -z "$v" ] && v="$(awk "BEGIN{print ($expr)}" 2>/dev/null)"
   [ -z "$v" ] && { printf '0'; return; }
-  awk -v v="$v" -v s="$scale" 'BEGIN{ printf "%.*f", s, v }' 2>/dev/null
+  # 除零会得到 inf/nan，这种值绝不能流进报告
+  awk -v v="$v" -v s="$scale" 'BEGIN{
+    if (v + 0 != v || v == "inf" || v == "-inf" || v == "nan") { printf "0"; exit }
+    printf "%.*f", s, v }' 2>/dev/null
 }
 
 # 字节 -> 人类可读
@@ -228,6 +230,18 @@ module_enabled() {
   fi
   return 0
 }
+
+# 「没测」和「测了但没结果」是两回事，报告里必须分清楚：
+# 前者写「本次未启用」，后者才写「未取得有效数据」。
+# 混着说等于在公开的测评里谎报，所以模块被跳过时统一走这里。
+# skip_note <原因> <章节键...>
+skip_note() {
+  local reason="$1"; shift
+  local k
+  for k in "$@"; do na_set "$k" "$reason"; done
+}
+# 模块被 --only / --skip 排除
+SKIP_REASON_OPT="本次未运行该测试项（被 --only / --skip 排除）"
 
 # 结果标记：解锁类统一符号
 mark_yes()  { printf '是'; }
@@ -726,7 +740,8 @@ _sysbench_cpu() {
 }
 
 test_cpu() {
-  module_enabled cpu || { log_info "跳过 CPU 测试"; return 0; }
+  module_enabled cpu || { log_info "跳过 CPU 测试"
+    skip_note "$SKIP_REASON_OPT" cpu; return 0; }
   step "CPU 性能测试"
 
   local cores secs
@@ -875,7 +890,8 @@ _sysbench_mem() {
 }
 
 test_memory() {
-  module_enabled memory || { log_info "跳过内存测试"; return 0; }
+  module_enabled memory || { log_info "跳过内存测试"
+    skip_note "$SKIP_REASON_OPT" memory; return 0; }
   step "内存性能测试"
 
   if have sysbench; then
@@ -965,16 +981,39 @@ _dd_read() {
   printf '%s' "$o" | grep -Eo '[0-9.]+ [KMG]?B/s' | tail -1
 }
 
+# 挑一个当前 fio 真的支持的 ioengine：
+# libaio 要装 libaio 库，最小化系统上常常没有；io_uring 要新内核；
+# psync 一定有，只是 iodepth 用不上。探测一次缓存下来。
+FIO_ENGINE=""
+_fio_pick_engine() {
+  [ -n "$FIO_ENGINE" ] && return 0
+  local avail e
+  avail="$(fio --enghelp 2>/dev/null)"
+  for e in libaio io_uring psync; do
+    case "$avail" in *"$e"*) FIO_ENGINE="$e"; break ;; esac
+  done
+  [ -z "$FIO_ENGINE" ] && FIO_ENGINE="psync"
+  [ "$FIO_ENGINE" != "libaio" ] && log_info "fio 使用 ioengine=$FIO_ENGINE"
+  return 0
+}
+
 # fio 单项：<块大小> <读写模式> <文件大小> <运行秒数>
-# 输出 "IOPS|带宽MB/s"
+# 输出 "读IOPS|读MB/s|写IOPS|写MB/s"
 _fio_one() {
   local bs="$1" rw="$2" size="$3" secs="$4"
   local out riops wiops rbw wbw
-  out="$(run_to $((secs + 60)) fio --name=vpstest --directory="$DISK_WORKDIR" \
-        --filename=.vpstest_fio --rw="$rw" --bs="$bs" --size="$size" \
-        --ioengine=libaio --direct=1 --iodepth=64 --numjobs=1 \
-        --runtime="$secs" --time_based --group_reporting \
-        --output-format=json --unlink=0 2>/dev/null)"
+  _fio_pick_engine
+
+  # direct=1 在 tmpfs / 某些 overlayfs 上不被支持，失败就退回缓冲 IO
+  local direct
+  for direct in 1 0; do
+    out="$(run_to $((secs + 60)) fio --name=vpstest --directory="$DISK_WORKDIR" \
+          --filename=.vpstest_fio --rw="$rw" --bs="$bs" --size="$size" \
+          --ioengine="$FIO_ENGINE" --direct="$direct" --iodepth=64 --numjobs=1 \
+          --runtime="$secs" --time_based --group_reporting \
+          --output-format=json --unlink=0 2>/dev/null)"
+    case "$out" in *'"jobs"'*) break ;; *) out="" ;; esac
+  done
   [ -z "$out" ] && return 1
   if have jq; then
     riops="$(printf '%s' "$out" | jq -r '.jobs[0].read.iops // 0'  2>/dev/null)"
@@ -994,7 +1033,8 @@ _fio_one() {
 }
 
 test_disk() {
-  module_enabled disk || { log_info "跳过磁盘测试"; return 0; }
+  module_enabled disk || { log_info "跳过磁盘测试"
+    skip_note "$SKIP_REASON_OPT" disk_dd disk_fio; return 0; }
   step "磁盘 I/O 测试"
 
   if ! DISK_WORKDIR="$(_pick_disk_dir)"; then
@@ -1187,11 +1227,14 @@ _rbl_check() {
 }
 
 test_ipquality() {
-  module_enabled ipquality || { log_info "跳过 IP 质量体检"; return 0; }
+  module_enabled ipquality || { log_info "跳过 IP 质量体检"
+    skip_note "$SKIP_REASON_OPT" ipq_base ipq_native ipq_type ipq_risk ipq_rbl ipq_port; return 0; }
   step "IP 质量体检"
 
   if [ -z "$IP4" ]; then
     log_warn "无 IPv4 出口，跳过 IP 质量体检"
+    skip_note "本机无 IPv4 公网出口，IP 质量无法检测" \
+      ipq_base ipq_native ipq_type ipq_risk ipq_rbl ipq_port
     return 0
   fi
 
@@ -1368,7 +1411,12 @@ test_ipquality() {
   local svc
   for svc in "www.google.com:443:Google" "github.com:443:GitHub" \
              "registry.npmjs.org:443:npm" "hub.docker.com:443:DockerHub"; do
-    local h="${svc%%:*}" rest="${svc#*:}" port="${rest%%:*}" name="${rest#*:}"
+    # 必须分开写：同一条 local 里后面的变量拿不到前面刚赋的值，
+    # 写在一行的话 port 和 name 会是空的
+    local h="${svc%%:*}"
+    local rest="${svc#*:}"
+    local port="${rest%%:*}"
+    local name="${rest#*:}"
     if _port_open "$h" "$port" 5; then
       row_add ipq_port "$name ($h:$port)" "✅ 可达"
     else
@@ -1403,7 +1451,8 @@ _ripestat() {
 }
 
 test_netquality() {
-  module_enabled netquality || { log_info "跳过回程网络质量检测"; return 0; }
+  module_enabled netquality || { log_info "跳过回程网络质量检测"
+    skip_note "$SKIP_REASON_OPT" nq_bgp nq_peer nq_ixp nq_local; return 0; }
   step "回程网络质量 / BGP 注册信息"
 
   if [ -z "$IP4" ]; then
@@ -1822,7 +1871,8 @@ u_wikipedia_edit() {
   [ -z "$body" ] && { printf '%s' "$NA"; return; }
   case "$body" in
     *"currently unable to edit"*|*"Your IP address is in a range that has been blocked"*|\
-    *"blockedtext"*|*"autoblockedtext"*)
+    *"blockedtext"*)
+        # *blockedtext* 已经覆盖 autoblockedtext，不用单列
         printf '❌ 不可编辑（IP 段被封）' ;;
     *"wpTextbox1"*|*"editform"*)
         printf '✅ 可编辑' ;;
@@ -2050,7 +2100,8 @@ _run_unlock_suite() {
 }
 
 test_unlock() {
-  module_enabled unlock || { log_info "跳过流媒体解锁检测"; return 0; }
+  module_enabled unlock || { log_info "跳过流媒体解锁检测"
+    skip_note "$SKIP_REASON_OPT" unlock4 unlock6 unlock_net; return 0; }
 
   # 网络识别：解锁结果跟出口网络强相关，先把网络身份记下来
   row_add unlock_net "出口网络"   "$(kv_or net.as '未知')"
@@ -2065,6 +2116,9 @@ test_unlock() {
     _run_unlock_suite unlock4
     kv_set unlock.v4.summary "$UNLOCK_RATE"
     log_ok "IPv4 解锁通过率: $UNLOCK_RATE（可用 $(kv_get unlock4.ok) / 不可用 $(kv_get unlock4.no) / 待确认 $(kv_get unlock4.err) / 难归类 $(kv_get unlock4.misc)）"
+  else
+    skip_note "本机无 IPv4 公网出口，未做 IPv4 解锁检测" unlock4
+    log_warn "无 IPv4 出口，跳过 IPv4 解锁检测"
   fi
 
   if [ "$IPV6_OK" = "1" ]; then
@@ -2075,6 +2129,7 @@ test_unlock() {
     log_ok "IPv6 解锁通过率: $UNLOCK_RATE"
   else
     kv_set unlock.v6.summary "无 IPv6 出口"
+    skip_note "本机无 IPv6 公网出口，未做 IPv6 解锁检测" unlock6
   fi
   UL_STACK=4
 }
@@ -2198,7 +2253,7 @@ EOF
 
 _run_node_list() {
   local table="$1" list="$2" limit="$3"
-  local n=0 line label kw fbid sid res
+  local n=0 label kw fbid sid res
   while IFS='|' read -r label kw fbid; do
     [ -z "$label" ] && continue
     [ "$limit" -gt 0 ] && [ "$n" -ge "$limit" ] && break
@@ -2223,15 +2278,26 @@ _run_node_list() {
 }
 
 test_speedtest() {
-  module_enabled speedtest || { log_info "跳过测速"; return 0; }
-  [ "$SPEEDTEST_MODE" = "off" ] && { log_info "已禁用测速"; return 0; }
+  module_enabled speedtest || { log_info "跳过测速"
+    skip_note "$SKIP_REASON_OPT" speed_auto speed_cn speed_gl; return 0; }
+  if [ "$SPEEDTEST_MODE" = "off" ]; then
+    log_info "已禁用测速"
+    skip_note "本次未运行测速（--speedtest off）" speed_auto speed_cn speed_gl
+    return 0
+  fi
+
+  # 只测了一边时，另一边要说清是「没测」而不是「测了没结果」
+  case "$SPEEDTEST_MODE" in
+    cn)     skip_note "本次只测了国内节点（--speedtest cn），未测国际节点" speed_gl ;;
+    global) skip_note "本次只测了国际节点（--speedtest global），未测国内三网" speed_cn ;;
+  esac
 
   step "三网 / 国际节点测速"
   log_warn "测速会消耗较多流量（每节点约 100-500MB），如流量敏感请用 --speedtest off"
 
   if ! install_speedtest; then
     log_warn "Speedtest CLI 不可用，跳过测速"
-    row_add speed_cn "测速" "Speedtest CLI 不可用" "" "" "" ""
+    skip_note "Speedtest CLI 下载失败或不支持当前架构，测速未执行" speed_auto speed_cn speed_gl
     return 0
   fi
 
@@ -2259,6 +2325,15 @@ test_speedtest() {
       _run_node_list speed_gl "$(_st_nodes_global)" "$limit"
       ;;
   esac
+
+  # 跑了但一行结果都没有，这时才是真正的「未取得有效数据」
+  case "$SPEEDTEST_MODE" in
+    cn|all)     rows_have speed_cn || na_set speed_cn "本次未取得有效数据：测速节点均未返回有效结果" ;;
+  esac
+  case "$SPEEDTEST_MODE" in
+    global|all) rows_have speed_gl || na_set speed_gl "本次未取得有效数据：测速节点均未返回有效结果" ;;
+  esac
+  rows_have speed_auto || na_set speed_auto "本次未取得有效数据：就近节点测速未返回结果"
 }
 
 # ===== 61_ping.sh =====
@@ -2338,7 +2413,8 @@ _run_ping_list() {
 }
 
 test_ping() {
-  module_enabled ping || { log_info "跳过延迟测试"; return 0; }
+  module_enabled ping || { log_info "跳过延迟测试"
+    skip_note "$SKIP_REASON_OPT" ping_cn ping_gl; return 0; }
   if ! have ping; then
     log_warn "系统缺少 ping 命令，跳过延迟测试"
     return 0
@@ -2446,7 +2522,8 @@ _guess_line() {
 }
 
 test_route() {
-  module_enabled route || { log_info "跳过路由追踪"; return 0; }
+  module_enabled route || { log_info "跳过路由追踪"
+    skip_note "$SKIP_REASON_OPT" route; return 0; }
   step "三网回程路由追踪"
 
   if [ "$(id -u)" != "0" ]; then
@@ -2455,6 +2532,7 @@ test_route() {
   install_nexttrace || true
   if [ -z "$NT_BIN" ] && ! have mtr && ! have traceroute && ! have tracepath; then
     log_warn "无可用的路由追踪工具，跳过"
+    skip_note "系统无可用的路由追踪工具（nexttrace / mtr / traceroute 均不可用）" route
     return 0
   fi
 
@@ -2480,7 +2558,7 @@ test_route() {
     _summarize_route route route.verdict
     [ -n "$(kv_get route.verdict)" ] && log_ok "回程线路：$(kv_get route.verdict)"
   else
-    na_set route "回程路由未取得有效数据"
+    na_set route "本次未取得有效回程路由数据（追踪工具不可用或全部超时）"
   fi
 }
 
@@ -2641,7 +2719,8 @@ _summarize_route() {
 }
 
 test_inbound() {
-  module_enabled inbound || { log_info "跳过去程测试"; return 0; }
+  module_enabled inbound || { log_info "跳过去程测试"
+    skip_note "$SKIP_REASON_OPT" inbound_isp inbound_region inbound_route inbound_mtr; return 0; }
   step "去程延迟 / 去程路由 / 去程 MTR（国内 → VPS）"
 
   # --- 去程延迟 ---
@@ -2711,7 +2790,8 @@ _mtr_parse() {
 }
 
 test_mtr() {
-  module_enabled mtr || { log_info "跳过 MTR 测试"; return 0; }
+  module_enabled mtr || { log_info "跳过 MTR 测试"
+    skip_note "$SKIP_REASON_OPT" mtr_out; return 0; }
   step "回程 MTR（丢包 / 抖动）"
 
   if ! have mtr; then
@@ -2749,7 +2829,7 @@ test_mtr() {
     fi
   done <<< "$(_mtr_targets)"
 
-  rows_have mtr_out || na_set mtr_out "回程 MTR 未取得有效数据"
+  rows_have mtr_out || na_set mtr_out "本次未取得有效回程 MTR 数据"
 }
 
 # ===== 65_score.sh =====
@@ -2906,7 +2986,8 @@ _iperf_run() {
 }
 
 test_iperf() {
-  module_enabled iperf || { log_info "跳过国际带宽测试"; return 0; }
+  module_enabled iperf || { log_info "跳过国际带宽测试"
+    skip_note "$SKIP_REASON_OPT" iperf; return 0; }
   # 默认不跑：每节点 1-3GB 流量，得用户明确开启
   if [ "$ENABLE_IPERF" != "1" ]; then
     na_set iperf "本次未启用国际带宽测试（流量消耗大，用 --iperf 或 --full 开启）"
@@ -2958,7 +3039,7 @@ test_iperf() {
     fi
   done <<< "$(_iperf_nodes)"
 
-  rows_have iperf || na_set iperf "所有公共 iperf3 节点均未连通，国际带宽未取得有效数据"
+  rows_have iperf || na_set iperf "本次未取得有效数据：所有公共 iperf3 节点均未连通"
 }
 
 # ===== 67_verdict.sh =====
@@ -2994,7 +3075,7 @@ build_verdict() {
   module_enabled verdict || return 0
   step "适用场景与购买建议"
 
-  local cn_lat net_dl disk_w cpu_s ul_ok
+  local cn_lat net_dl disk_w cpu_s
   cn_lat="$(kv_get ping.cn.avg)"
   net_dl="$(kv_get speed.auto.down)"
   disk_w="$(kv_get disk.dd.write_avg)"
@@ -3210,7 +3291,7 @@ md_kv_row() { printf '| %s | %s |\n' "$1" "$2"; }
 md_na() {
   local key="$1"
   na_has "$key" || return 1
-  printf '> ⚠️ **本次未取得有效数据**：%s\n\n' "$(na_get "$key")"
+  printf '> ⚠️ %s\n\n' "$(na_get "$key")"
   return 0
 }
 
@@ -3224,18 +3305,34 @@ gen_markdown() {
   local title
   title="$(kv_or meta.node_name "$(kv_get sys.cpu.model)")"
 
-  cat <<EOF
-# ${title} 服务器测评报告
+  printf '# %s 服务器测评报告\n\n' "$title"
 
-> 测试时间：**$(kv_get meta.time_local)**（$(kv_get meta.time_utc)）
-> 测试工具：[${VPSTEST_NAME} v${VPSTEST_VERSION}](${VPSTEST_REPO})
-> 出口位置：$(kv_get net.location) · $(kv_or net.as '未知 ASN')
+  # 摘要先行：读者扫一眼就能拿到结论，细节再往下翻
+  printf '> **测试时间**：%s（%s）\n' "$(kv_get meta.time_local)" "$(kv_get meta.time_utc)"
+  printf '> **出口位置**：%s · %s\n' "$(kv_get net.location)" "$(kv_or net.as '未知 ASN')"
+  [ -n "$(kv_get profile.vendor)" ] &&
+    printf '> **商家套餐**：%s %s%s ｜ %s\n' \
+      "$(kv_get profile.vendor)" "$(kv_get profile.plan)" \
+      "$([ -n "$(kv_get profile.dc)" ] && printf ' @ %s' "$(kv_get profile.dc)")" \
+      "$(kv_or profile.price '价格未填')"
+  printf '> **配置**：%s × %s 核 ｜ 内存 %s ｜ 硬盘 %s\n' \
+    "$(kv_get sys.cpu.model)" "$(kv_get sys.cpu.cores)" \
+    "$(kv_get sys.mem.total)" "$(printf '%s' "$(kv_get sys.disk.summary)" | awk -F' / ' '{print $2}')"
+  [ -n "$(kv_get score.total)" ] &&
+    printf '> **综合评分**：**%s / 100** — %s\n' "$(kv_get score.total)" "$(kv_get score.grade)"
+  [ -n "$(kv_get route.verdict)" ] &&
+    printf '> **回程线路**：%s\n' "$(kv_get route.verdict)"
+  [ -n "$(kv_get inbound.route_verdict)" ] &&
+    printf '> **去程线路**：%s\n' "$(kv_get inbound.route_verdict)"
+  [ -n "$(kv_get ping.cn.avg)" ] &&
+    printf '> **国内延迟**：平均 %s ms\n' "$(kv_get ping.cn.avg)"
+  [ -n "$(kv_get unlock.v4.summary)" ] &&
+    printf '> **解锁通过率**：%s（IPv4）\n' "$(kv_get unlock.v4.summary)"
+  [ -n "$(kv_get ipq.native)" ] &&
+    printf '> **IP 类型**：%s\n' "$(kv_get ipq.native)"
+  printf '> **测试工具**：[%s v%s](%s)\n\n' "$VPSTEST_NAME" "$VPSTEST_VERSION" "$VPSTEST_REPO"
 
----
-
-## 📊 综合评分
-
-EOF
+  printf -- '---\n\n## 📊 综合评分\n\n'
 
   if rows_have score; then
     printf '**总分：%s / 100 —— %s**\n\n' "$(kv_get score.total)" "$(kv_get score.grade)"
@@ -3390,7 +3487,7 @@ EOF
   if rows_have speed_cn; then
     md_table speed_cn "节点" "下载" "上传" "延迟" "抖动" "服务器"
   else
-    printf '> ⚠️ **本次未取得有效数据**：国内测速节点未返回有效结果。\n\n'
+    md_na speed_cn || printf '> 本节未测试。\n\n'
   fi
   if rows_have ping_cn || rows_have ping_gl; then
     printf '### 8.4 回程延迟与丢包（VPS → 各地）\n\n'
@@ -3422,7 +3519,8 @@ EOF
     printf '### 9.3 IPv6 结果（通过率 %s）\n\n' "$(kv_or unlock.v6.summary 'N/A')"
     md_table unlock6 "服务" "结果"
   else
-    printf '### 9.3 IPv6 结果\n\n> %s\n\n' "$(kv_or unlock.v6.summary '本次未检测')"
+    printf '### 9.3 IPv6 结果\n\n'
+    md_na unlock6 || printf '> %s\n\n' "$(kv_or unlock.v6.summary '本次未检测')"
   fi
 
   # ========== 十、IP 质量 ==========
@@ -3440,7 +3538,7 @@ EOF
     rows_have ipq_port && { printf '### 10.6 出站端口与连通性\n\n'; md_table ipq_port "检测项" "结果"; }
     printf '> **综合判断**：%s——%s\n\n' "$(kv_or ipq.native '未判定')" "$(kv_or ipq.native_reason '')"
   else
-    printf '> 本节未测试。\n\n'
+    md_na ipq_base || printf '> 本节未测试。\n\n'
   fi
 
   # ========== 十一、适用场景与购买建议 ==========
@@ -3526,7 +3624,7 @@ bb_kv() { printf '[tr][td][b]%s[/b][/td][td]%s[/td][/tr]\n' "$1" "$(bb_plain "$2
 bb_na() {
   local key="$1"
   na_has "$key" || return 1
-  printf '[color=#b45309][b]本次未取得有效数据：[/b]%s[/color]\n\n' "$(bb_plain "$(na_get "$key")")"
+  printf '[color=#b45309][b][?] [/b]%s[/color]\n\n' "$(bb_plain "$(na_get "$key")")"
   return 0
 }
 
@@ -3658,7 +3756,7 @@ gen_bbcode() {
   if rows_have speed_cn; then
     bb_table speed_cn "节点" "下载" "上传" "延迟" "抖动" "服务器"
   else
-    printf '[color=#b45309][b]本次未取得有效数据：[/b]国内测速节点未返回有效结果。[/color]\n\n'
+    bb_na speed_cn || printf '本节未测试。\n\n'
   fi
   rows_have ping_cn && { bb_h2 "回程延迟 · 国内三网（均值 $(kv_or ping.cn.avg 'N/A') ms）"
     bb_table ping_cn "节点" "线路" "平均延迟" "丢包率"; }
@@ -3682,7 +3780,7 @@ gen_bbcode() {
     bb_table unlock6 "服务" "结果"
   else
     bb_h2 "IPv6 结果"
-    printf '%s\n\n' "$(kv_or unlock.v6.summary '本次未检测')"
+    bb_na unlock6 || printf '%s\n\n' "$(kv_or unlock.v6.summary '本次未检测')"
   fi
 
   # ===== 十、IP 质量 =====
@@ -3779,7 +3877,7 @@ html_section_end() { printf '</section>\n'; }
 html_na() {
   local key="$1"
   na_has "$key" || return 1
-  printf '<p class="na">⚠️ <b>本次未取得有效数据</b>：%s</p>' "$(html_escape "$(na_get "$key")")"
+  printf '<p class="na">⚠️ %s</p>' "$(html_escape "$(na_get "$key")")"
   return 0
 }
 
@@ -3846,6 +3944,20 @@ pre{background:var(--code);border:1px solid var(--line);border-radius:8px;
   padding:12px;overflow-x:auto;font-size:12.5px;line-height:1.5}
 details{margin:10px 0}
 summary{cursor:pointer;color:var(--accent);font-size:14px;padding:4px 0}
+.summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1px;
+  background:var(--line);border:1px solid var(--line);border-radius:14px;
+  overflow:hidden;margin:0 0 20px}
+.summary .si{background:var(--card);padding:12px 14px;min-width:0}
+.summary .si span{display:block;color:var(--muted);font-size:12px;margin-bottom:2px}
+.summary .si b{font-size:14px;word-break:break-word}
+.toc{background:var(--card);border:1px solid var(--line);border-radius:14px;
+  padding:14px 20px;margin:0 0 20px}
+.toc b{font-size:14px}
+.toc ol{margin:8px 0 0;padding-left:20px;columns:2;column-gap:24px;font-size:14px}
+.toc li{margin:3px 0;break-inside:avoid}
+.toc a{text-decoration:none}
+.toc a:hover{text-decoration:underline}
+section{scroll-margin-top:16px}
 .na{background:color-mix(in srgb, var(--warn) 12%, transparent);
   border-left:3px solid var(--warn);border-radius:0 8px 8px 0;
   padding:10px 14px;margin:10px 0;font-size:14px}
@@ -3859,6 +3971,8 @@ a{color:var(--accent)}
   .score .big{font-size:32px}
   table{font-size:13px}
   table.kv th{width:110px}
+  .toc ol{columns:1}
+  .summary{grid-template-columns:repeat(auto-fit,minmax(140px,1fr))}
 }
 </style>
 CSSEOF
@@ -3869,6 +3983,22 @@ CSSEOF
     "$(html_escape "$(kv_get meta.time_local)")" \
     "$(html_escape "$(kv_get net.location)")" \
     "$(html_escape "$(kv_or net.as '未知 ASN')")"
+
+  # ---- 摘要条：先给结论 ----
+  printf '<div class="summary">'
+  _sum_item() { [ -n "$2" ] && printf '<div class="si"><span>%s</span><b>%s</b></div>' \
+    "$(html_escape "$1")" "$(html_escape "$2")"; }
+  _sum_item "配置" "$(kv_get sys.cpu.cores) 核 / $(kv_get sys.mem.total) / $(printf '%s' "$(kv_get sys.disk.summary)" | awk -F' / ' '{print $2}')"
+  _sum_item "商家套餐" "$([ -n "$(kv_get profile.vendor)" ] && printf '%s %s' "$(kv_get profile.vendor)" "$(kv_get profile.plan)")"
+  _sum_item "价格"     "$(kv_get profile.price)"
+  _sum_item "国内延迟" "$([ -n "$(kv_get ping.cn.avg)" ] && printf '%s ms' "$(kv_get ping.cn.avg)")"
+  _sum_item "就近下行" "$([ -n "$(kv_get speed.auto.down)" ] && printf '%s Mbps' "$(kv_get speed.auto.down)")"
+  _sum_item "解锁通过率" "$(kv_get unlock.v4.summary)"
+  _sum_item "IP 类型"  "$(kv_get ipq.native)"
+  _sum_item "回程线路" "$(kv_get route.verdict)"
+  _sum_item "去程线路" "$(kv_get inbound.route_verdict)"
+  unset -f _sum_item
+  printf '</div>\n'
 
   # ---- 评分卡 ----
   if rows_have score; then
@@ -3886,6 +4016,22 @@ CSSEOF
     done <<< "$(rows_get score)"
     printf '</div></div>\n'
   fi
+
+  # ---- 目录：12 章的页面太长，给个锚点导航 ----
+  printf '<nav class="toc"><b>目录</b><ol>'
+  printf '<li><a href="#profile">基本配置核对</a></li>'
+  printf '<li><a href="#perf">性能与硬件检测</a></li>'
+  printf '<li><a href="#inbound">去程延迟</a></li>'
+  printf '<li><a href="#inroute">去程路由</a></li>'
+  printf '<li><a href="#inmtr">去程 MTR</a></li>'
+  printf '<li><a href="#netq">回程网络质量</a></li>'
+  printf '<li><a href="#route">回程路由</a></li>'
+  printf '<li><a href="#speed">网络测速</a></li>'
+  printf '<li><a href="#unlock">流媒体解锁</a></li>'
+  printf '<li><a href="#ipq">IP 质量检测</a></li>'
+  printf '<li><a href="#verdict">适用场景与建议</a></li>'
+  printf '<li><a href="#raw">原始结果归档</a></li>'
+  printf '</ol></nav>\n'
 
 
   # ===== 一、基本配置核对 =====
@@ -4015,7 +4161,7 @@ CSSEOF
   if rows_have speed_cn; then
     html_table speed_cn "节点" "下载" "上传" "延迟" "抖动" "服务器"
   else
-    printf '<p class="na">⚠️ <b>本次未取得有效数据</b>：国内测速节点未返回有效结果。</p>'
+    html_na speed_cn || printf '<p class="na">本节未测试。</p>'
   fi
   rows_have ping_cn && { printf '<h3>回程延迟 · 国内三网（均值 %s ms）</h3>' "$(html_escape "$(kv_or ping.cn.avg 'N/A')")"
     html_table ping_cn "节点" "线路" "平均延迟" "丢包率"; }
@@ -4042,7 +4188,8 @@ CSSEOF
     printf '<h3>IPv6 结果（通过率 %s）</h3>' "$(html_escape "$(kv_or unlock.v6.summary 'N/A')")"
     html_table unlock6 "服务" "结果"
   else
-    printf '<h3>IPv6 结果</h3><p class="na">%s</p>' "$(html_escape "$(kv_or unlock.v6.summary '本次未检测')")"
+    printf '<h3>IPv6 结果</h3>'
+    html_na unlock6 || printf '<p class="na">%s</p>' "$(html_escape "$(kv_or unlock.v6.summary '本次未检测')")"
   fi
   html_section_end
 
@@ -4059,7 +4206,7 @@ CSSEOF
     printf '<p><b>综合判断：</b>%s——%s</p>' \
       "$(html_escape "$(kv_or ipq.native '未判定')")" "$(html_escape "$(kv_or ipq.native_reason '')")"
   else
-    printf '<p class="na">本节未测试。</p>'
+    html_na ipq_base || printf '<p class="na">本节未测试。</p>'
   fi
   html_section_end
 
@@ -4192,7 +4339,7 @@ txt_kv() { printf ' %-14s : %s\n' "$1" "$2"; }
 txt_na() {
   local key="$1"
   na_has "$key" || return 1
-  printf ' [!] 本次未取得有效数据：%s\n\n' "$(na_get "$key")"
+  printf ' [!] %s\n\n' "$(na_get "$key")"
   return 0
 }
 
@@ -4289,7 +4436,7 @@ gen_txt() {
   if rows_have speed_cn; then
     txt_table speed_cn "国内三网" "下载" "上传" "延迟" "抖动" "服务器"
   else
-    printf ' [!] 国内测速本次未取得有效数据。\n\n'
+    txt_na speed_cn || printf ' 本节未测试。\n\n'
   fi
   rows_have ping_cn && { printf ' 回程延迟 · 国内三网（均值 %s ms）\n' "$(kv_or ping.cn.avg 'N/A')"
                          txt_table ping_cn "节点" "线路" "延迟" "丢包"; }
@@ -4403,7 +4550,7 @@ ns_tab_table() {
 ns_na() {
   local key="$1"
   na_has "$key" || return 1
-  printf '> ⚠️ **本次未取得有效数据**：%s\n\n' "$(na_get "$key")"
+  printf '> ⚠️ %s\n\n' "$(na_get "$key")"
   return 0
 }
 
@@ -4585,7 +4732,7 @@ gen_nodeseek() {
   fi
   ns_tabs_close
   rows_have iperf    || ns_na iperf
-  rows_have speed_cn || printf '> ⚠️ **国内测速本次未取得有效数据**。\n\n'
+  rows_have speed_cn || ns_na speed_cn
 
   # ========== 九、流媒体解锁 ==========
   printf '## 九、流媒体与在线服务解锁\n\n'
@@ -4628,7 +4775,7 @@ gen_nodeseek() {
     ns_tab_table "端口与连通性" ipq_port "检测项" "结果"
     ns_tabs_close
   else
-    printf '> 本节未测试。\n\n'
+    ns_na ipq_base || printf '> 本节未测试。\n\n'
   fi
 
   # ========== 十一、适用场景与购买建议 ==========
@@ -4854,9 +5001,43 @@ print_summary() {
   [ "$QUIET" = "1" ] && { printf '%s\n' "$REPORT_BASE"; return 0; }
   printf '\n%s%s══════════════ 测试完成 ══════════════%s\n' "$C_B" "$C_G" "$C_RST"
   printf '  机器      : %s\n' "$(kv_or meta.node_name "$(kv_get sys.cpu.model)")"
+  printf '  配置      : %s 核 / %s / %s\n' \
+    "$(kv_get sys.cpu.cores)" "$(kv_get sys.mem.total)" \
+    "$(printf '%s' "$(kv_get sys.disk.summary)" | awk -F' / ' '{print $2}')"
   printf '  出口      : %s | %s\n' "$(kv_get net.location)" "$(kv_or net.as 'N/A')"
+
+  # 关键指标：有就报，没有就不占地方
+  local v
+  v="$(kv_get cpu.sysbench.single)"; [ -n "$v" ] &&
+    printf '  CPU 单核  : %s events/s\n' "$v"
+  v="$(kv_get disk.dd.write_avg)";   [ -n "$v" ] &&
+    printf '  磁盘写入  : %s MB/s（dd 均值）\n' "$v"
+  v="$(kv_get ping.cn.avg)";         [ -n "$v" ] &&
+    printf '  国内延迟  : %s ms（三网均值）\n' "$v"
+  v="$(kv_get speed.auto.down)";     [ -n "$v" ] &&
+    printf '  就近带宽  : ↓ %s Mbps / ↑ %s Mbps\n' "$v" "$(kv_or speed.auto.up 'N/A')"
+  v="$(kv_get unlock.v4.summary)";   [ -n "$v" ] &&
+    printf '  解锁通过  : %s（可用 %s / 不可用 %s）\n' \
+      "$v" "$(kv_or unlock4.ok 0)" "$(kv_or unlock4.no 0)"
+  v="$(kv_get ipq.native)";          [ -n "$v" ] &&
+    printf '  IP 类型   : %s\n' "$v"
+  v="$(kv_get route.verdict)";       [ -n "$v" ] &&
+    printf '  回程线路  : %s\n' "$v"
+  v="$(kv_get inbound.route_verdict)"; [ -n "$v" ] &&
+    printf '  去程线路  : %s\n' "$v"
+
   printf '  综合评分  : %s%s / 100 — %s%s\n' "$C_B" "$(kv_or score.total 'N/A')" "$(kv_or score.grade '')" "$C_RST"
   printf '  总耗时    : %s\n' "$(kv_or meta.duration 'N/A')"
+
+  # 有项目没拿到数据就提醒一句，别让人以为全测了
+  # 注意这里数的是检测项（一个章节可能含多张表），不是章节数
+  local na_n=0 k
+  for k in "${!KV[@]}"; do
+    case "$k" in na.*) na_n=$((na_n + 1)) ;; esac
+  done
+  [ "$na_n" -gt 0 ] &&
+    printf '  %s注意%s      : 有 %s 个检测项未取得数据，报告里已逐条注明原因\n' \
+      "$C_Y" "$C_RST" "$na_n"
   printf '\n  报告文件:\n'
   printf '    博客 Markdown  : %s.md\n'          "$REPORT_BASE"
   printf '    NodeSeek 专用  : %s.nodeseek.md\n' "$REPORT_BASE"

@@ -88,7 +88,7 @@ txt_kv() { printf ' %-14s : %s\n' "$1" "$2"; }
 txt_na() {
   local key="$1"
   na_has "$key" || return 1
-  printf ' [!] 本次未取得有效数据：%s\n\n' "$(na_get "$key")"
+  printf ' [!] %s\n\n' "$(na_get "$key")"
   return 0
 }
 
@@ -185,7 +185,7 @@ gen_txt() {
   if rows_have speed_cn; then
     txt_table speed_cn "国内三网" "下载" "上传" "延迟" "抖动" "服务器"
   else
-    printf ' [!] 国内测速本次未取得有效数据。\n\n'
+    txt_na speed_cn || printf ' 本节未测试。\n\n'
   fi
   rows_have ping_cn && { printf ' 回程延迟 · 国内三网（均值 %s ms）\n' "$(kv_or ping.cn.avg 'N/A')"
                          txt_table ping_cn "节点" "线路" "延迟" "丢包"; }

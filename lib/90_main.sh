@@ -167,9 +167,43 @@ print_summary() {
   [ "$QUIET" = "1" ] && { printf '%s\n' "$REPORT_BASE"; return 0; }
   printf '\n%s%s══════════════ 测试完成 ══════════════%s\n' "$C_B" "$C_G" "$C_RST"
   printf '  机器      : %s\n' "$(kv_or meta.node_name "$(kv_get sys.cpu.model)")"
+  printf '  配置      : %s 核 / %s / %s\n' \
+    "$(kv_get sys.cpu.cores)" "$(kv_get sys.mem.total)" \
+    "$(printf '%s' "$(kv_get sys.disk.summary)" | awk -F' / ' '{print $2}')"
   printf '  出口      : %s | %s\n' "$(kv_get net.location)" "$(kv_or net.as 'N/A')"
+
+  # 关键指标：有就报，没有就不占地方
+  local v
+  v="$(kv_get cpu.sysbench.single)"; [ -n "$v" ] &&
+    printf '  CPU 单核  : %s events/s\n' "$v"
+  v="$(kv_get disk.dd.write_avg)";   [ -n "$v" ] &&
+    printf '  磁盘写入  : %s MB/s（dd 均值）\n' "$v"
+  v="$(kv_get ping.cn.avg)";         [ -n "$v" ] &&
+    printf '  国内延迟  : %s ms（三网均值）\n' "$v"
+  v="$(kv_get speed.auto.down)";     [ -n "$v" ] &&
+    printf '  就近带宽  : ↓ %s Mbps / ↑ %s Mbps\n' "$v" "$(kv_or speed.auto.up 'N/A')"
+  v="$(kv_get unlock.v4.summary)";   [ -n "$v" ] &&
+    printf '  解锁通过  : %s（可用 %s / 不可用 %s）\n' \
+      "$v" "$(kv_or unlock4.ok 0)" "$(kv_or unlock4.no 0)"
+  v="$(kv_get ipq.native)";          [ -n "$v" ] &&
+    printf '  IP 类型   : %s\n' "$v"
+  v="$(kv_get route.verdict)";       [ -n "$v" ] &&
+    printf '  回程线路  : %s\n' "$v"
+  v="$(kv_get inbound.route_verdict)"; [ -n "$v" ] &&
+    printf '  去程线路  : %s\n' "$v"
+
   printf '  综合评分  : %s%s / 100 — %s%s\n' "$C_B" "$(kv_or score.total 'N/A')" "$(kv_or score.grade '')" "$C_RST"
   printf '  总耗时    : %s\n' "$(kv_or meta.duration 'N/A')"
+
+  # 有项目没拿到数据就提醒一句，别让人以为全测了
+  # 注意这里数的是检测项（一个章节可能含多张表），不是章节数
+  local na_n=0 k
+  for k in "${!KV[@]}"; do
+    case "$k" in na.*) na_n=$((na_n + 1)) ;; esac
+  done
+  [ "$na_n" -gt 0 ] &&
+    printf '  %s注意%s      : 有 %s 个检测项未取得数据，报告里已逐条注明原因\n' \
+      "$C_Y" "$C_RST" "$na_n"
   printf '\n  报告文件:\n'
   printf '    博客 Markdown  : %s.md\n'          "$REPORT_BASE"
   printf '    NodeSeek 专用  : %s.nodeseek.md\n' "$REPORT_BASE"

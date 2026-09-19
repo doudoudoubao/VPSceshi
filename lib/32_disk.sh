@@ -47,16 +47,39 @@ _dd_read() {
   printf '%s' "$o" | grep -Eo '[0-9.]+ [KMG]?B/s' | tail -1
 }
 
+# 挑一个当前 fio 真的支持的 ioengine：
+# libaio 要装 libaio 库，最小化系统上常常没有；io_uring 要新内核；
+# psync 一定有，只是 iodepth 用不上。探测一次缓存下来。
+FIO_ENGINE=""
+_fio_pick_engine() {
+  [ -n "$FIO_ENGINE" ] && return 0
+  local avail e
+  avail="$(fio --enghelp 2>/dev/null)"
+  for e in libaio io_uring psync; do
+    case "$avail" in *"$e"*) FIO_ENGINE="$e"; break ;; esac
+  done
+  [ -z "$FIO_ENGINE" ] && FIO_ENGINE="psync"
+  [ "$FIO_ENGINE" != "libaio" ] && log_info "fio 使用 ioengine=$FIO_ENGINE"
+  return 0
+}
+
 # fio 单项：<块大小> <读写模式> <文件大小> <运行秒数>
-# 输出 "IOPS|带宽MB/s"
+# 输出 "读IOPS|读MB/s|写IOPS|写MB/s"
 _fio_one() {
   local bs="$1" rw="$2" size="$3" secs="$4"
   local out riops wiops rbw wbw
-  out="$(run_to $((secs + 60)) fio --name=vpstest --directory="$DISK_WORKDIR" \
-        --filename=.vpstest_fio --rw="$rw" --bs="$bs" --size="$size" \
-        --ioengine=libaio --direct=1 --iodepth=64 --numjobs=1 \
-        --runtime="$secs" --time_based --group_reporting \
-        --output-format=json --unlink=0 2>/dev/null)"
+  _fio_pick_engine
+
+  # direct=1 在 tmpfs / 某些 overlayfs 上不被支持，失败就退回缓冲 IO
+  local direct
+  for direct in 1 0; do
+    out="$(run_to $((secs + 60)) fio --name=vpstest --directory="$DISK_WORKDIR" \
+          --filename=.vpstest_fio --rw="$rw" --bs="$bs" --size="$size" \
+          --ioengine="$FIO_ENGINE" --direct="$direct" --iodepth=64 --numjobs=1 \
+          --runtime="$secs" --time_based --group_reporting \
+          --output-format=json --unlink=0 2>/dev/null)"
+    case "$out" in *'"jobs"'*) break ;; *) out="" ;; esac
+  done
   [ -z "$out" ] && return 1
   if have jq; then
     riops="$(printf '%s' "$out" | jq -r '.jobs[0].read.iops // 0'  2>/dev/null)"
@@ -76,7 +99,8 @@ _fio_one() {
 }
 
 test_disk() {
-  module_enabled disk || { log_info "跳过磁盘测试"; return 0; }
+  module_enabled disk || { log_info "跳过磁盘测试"
+    skip_note "$SKIP_REASON_OPT" disk_dd disk_fio; return 0; }
   step "磁盘 I/O 测试"
 
   if ! DISK_WORKDIR="$(_pick_disk_dir)"; then

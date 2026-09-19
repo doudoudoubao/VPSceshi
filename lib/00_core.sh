@@ -57,7 +57,6 @@ step() {
 # ---------- 结果存储 ----------
 declare -A KV      # 单值：KV[section.key]=value
 declare -A ROWS    # 表格：ROWS[table]=多行，字段以 | 分隔
-declare -a RAWLOGS # 原始输出片段（路由等）
 
 kv_set() { KV["$1"]="$2"; }
 kv_get() { printf '%s' "${KV[$1]-}"; }
@@ -156,7 +155,10 @@ calc() {
   fi
   [ -z "$v" ] && v="$(awk "BEGIN{print ($expr)}" 2>/dev/null)"
   [ -z "$v" ] && { printf '0'; return; }
-  awk -v v="$v" -v s="$scale" 'BEGIN{ printf "%.*f", s, v }' 2>/dev/null
+  # 除零会得到 inf/nan，这种值绝不能流进报告
+  awk -v v="$v" -v s="$scale" 'BEGIN{
+    if (v + 0 != v || v == "inf" || v == "-inf" || v == "nan") { printf "0"; exit }
+    printf "%.*f", s, v }' 2>/dev/null
 }
 
 # 字节 -> 人类可读
@@ -213,6 +215,18 @@ module_enabled() {
   fi
   return 0
 }
+
+# 「没测」和「测了但没结果」是两回事，报告里必须分清楚：
+# 前者写「本次未启用」，后者才写「未取得有效数据」。
+# 混着说等于在公开的测评里谎报，所以模块被跳过时统一走这里。
+# skip_note <原因> <章节键...>
+skip_note() {
+  local reason="$1"; shift
+  local k
+  for k in "$@"; do na_set "$k" "$reason"; done
+}
+# 模块被 --only / --skip 排除
+SKIP_REASON_OPT="本次未运行该测试项（被 --only / --skip 排除）"
 
 # 结果标记：解锁类统一符号
 mark_yes()  { printf '是'; }

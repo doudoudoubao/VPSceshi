@@ -22,7 +22,8 @@ _ripestat() {
 }
 
 test_netquality() {
-  module_enabled netquality || { log_info "跳过回程网络质量检测"; return 0; }
+  module_enabled netquality || { log_info "跳过回程网络质量检测"
+    skip_note "$SKIP_REASON_OPT" nq_bgp nq_peer nq_ixp nq_local; return 0; }
   step "回程网络质量 / BGP 注册信息"
 
   if [ -z "$IP4" ]; then

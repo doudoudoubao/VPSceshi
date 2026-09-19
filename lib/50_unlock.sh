@@ -281,7 +281,8 @@ u_wikipedia_edit() {
   [ -z "$body" ] && { printf '%s' "$NA"; return; }
   case "$body" in
     *"currently unable to edit"*|*"Your IP address is in a range that has been blocked"*|\
-    *"blockedtext"*|*"autoblockedtext"*)
+    *"blockedtext"*)
+        # *blockedtext* 已经覆盖 autoblockedtext，不用单列
         printf '❌ 不可编辑（IP 段被封）' ;;
     *"wpTextbox1"*|*"editform"*)
         printf '✅ 可编辑' ;;
@@ -509,7 +510,8 @@ _run_unlock_suite() {
 }
 
 test_unlock() {
-  module_enabled unlock || { log_info "跳过流媒体解锁检测"; return 0; }
+  module_enabled unlock || { log_info "跳过流媒体解锁检测"
+    skip_note "$SKIP_REASON_OPT" unlock4 unlock6 unlock_net; return 0; }
 
   # 网络识别：解锁结果跟出口网络强相关，先把网络身份记下来
   row_add unlock_net "出口网络"   "$(kv_or net.as '未知')"
@@ -524,6 +526,9 @@ test_unlock() {
     _run_unlock_suite unlock4
     kv_set unlock.v4.summary "$UNLOCK_RATE"
     log_ok "IPv4 解锁通过率: $UNLOCK_RATE（可用 $(kv_get unlock4.ok) / 不可用 $(kv_get unlock4.no) / 待确认 $(kv_get unlock4.err) / 难归类 $(kv_get unlock4.misc)）"
+  else
+    skip_note "本机无 IPv4 公网出口，未做 IPv4 解锁检测" unlock4
+    log_warn "无 IPv4 出口，跳过 IPv4 解锁检测"
   fi
 
   if [ "$IPV6_OK" = "1" ]; then
@@ -534,6 +539,7 @@ test_unlock() {
     log_ok "IPv6 解锁通过率: $UNLOCK_RATE"
   else
     kv_set unlock.v6.summary "无 IPv6 出口"
+    skip_note "本机无 IPv6 公网出口，未做 IPv6 解锁检测" unlock6
   fi
   UL_STACK=4
 }

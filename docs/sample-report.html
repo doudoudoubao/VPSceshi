@@ -58,6 +58,20 @@ pre{background:var(--code);border:1px solid var(--line);border-radius:8px;
   padding:12px;overflow-x:auto;font-size:12.5px;line-height:1.5}
 details{margin:10px 0}
 summary{cursor:pointer;color:var(--accent);font-size:14px;padding:4px 0}
+.summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1px;
+  background:var(--line);border:1px solid var(--line);border-radius:14px;
+  overflow:hidden;margin:0 0 20px}
+.summary .si{background:var(--card);padding:12px 14px;min-width:0}
+.summary .si span{display:block;color:var(--muted);font-size:12px;margin-bottom:2px}
+.summary .si b{font-size:14px;word-break:break-word}
+.toc{background:var(--card);border:1px solid var(--line);border-radius:14px;
+  padding:14px 20px;margin:0 0 20px}
+.toc b{font-size:14px}
+.toc ol{margin:8px 0 0;padding-left:20px;columns:2;column-gap:24px;font-size:14px}
+.toc li{margin:3px 0;break-inside:avoid}
+.toc a{text-decoration:none}
+.toc a:hover{text-decoration:underline}
+section{scroll-margin-top:16px}
 .na{background:color-mix(in srgb, var(--warn) 12%, transparent);
   border-left:3px solid var(--warn);border-radius:0 8px 8px 0;
   padding:10px 14px;margin:10px 0;font-size:14px}
@@ -71,6 +85,8 @@ a{color:var(--accent)}
   .score .big{font-size:32px}
   table{font-size:13px}
   table.kv th{width:110px}
+  .toc ol{columns:1}
+  .summary{grid-template-columns:repeat(auto-fit,minmax(140px,1fr))}
 }
 </style>
 </head>
@@ -78,7 +94,9 @@ a{color:var(--accent)}
 <div class="wrap">
 <header><h1>DMIT HKG.AN5.EB.Tiny 服务器测评报告</h1>
 <div class="meta">测试时间：2026-09-19 16:20:31 CST ｜ 出口位置：中国香港 Hong Kong ｜ AS3335 DMIT</div></header>
+<div class="summary"><div class="si"><span>配置</span><b>1 核 / 984.27 MB / 19.56 GB</b></div><div class="si"><span>商家套餐</span><b>DMIT HKG.AN5.EB.Tiny</b></div><div class="si"><span>价格</span><b>9.90 AUD / 月付</b></div><div class="si"><span>国内延迟</span><b>39.8 ms</b></div><div class="si"><span>就近下行</span><b>946.21 Mbps</b></div><div class="si"><span>解锁通过率</span><b>25/37</b></div><div class="si"><span>IP 类型</span><b>📡 广播 IP</b></div><div class="si"><span>回程线路</span><b>CN2 GIA (AS4809/59.43)；联通 A网 CUII (AS9929)；移动 CMIN2 (AS58807)</b></div><div class="si"><span>去程线路</span><b>电信 CN2 GIA (AS4809) / 电信 163 骨干 (AS4134)；联通 169 骨干 (AS4837)；移动 CMI (AS58453) / 移动 CMNET (AS9808)</b></div></div>
 <div class="score"><div class="big">86.8<span style="font-size:18px;color:var(--muted)"> / 100</span></div><div class="grade">S 级 · 优秀</div><div class="bars"><div class="bar"><div class="lab"><span>CPU 性能</span><span>18.3 / 25</span></div><div class="track"><div class="fill" style="width:73%"></div></div></div><div class="bar"><div class="lab"><span>磁盘 I/O</span><span>19.1 / 20</span></div><div class="track"><div class="fill" style="width:96%"></div></div></div><div class="bar"><div class="lab"><span>网络带宽</span><span>23.7 / 25</span></div><div class="track"><div class="fill" style="width:95%"></div></div></div><div class="bar"><div class="lab"><span>国内延迟</span><span>15.0 / 15</span></div><div class="track"><div class="fill" style="width:100%"></div></div></div><div class="bar"><div class="lab"><span>流媒体解锁</span><span>6.8 / 10</span></div><div class="track"><div class="fill" style="width:68%"></div></div></div><div class="bar"><div class="lab"><span>IP 质量</span><span>3.9 / 5</span></div><div class="track"><div class="fill" style="width:78%"></div></div></div></div></div>
+<nav class="toc"><b>目录</b><ol><li><a href="#profile">基本配置核对</a></li><li><a href="#perf">性能与硬件检测</a></li><li><a href="#inbound">去程延迟</a></li><li><a href="#inroute">去程路由</a></li><li><a href="#inmtr">去程 MTR</a></li><li><a href="#netq">回程网络质量</a></li><li><a href="#route">回程路由</a></li><li><a href="#speed">网络测速</a></li><li><a href="#unlock">流媒体解锁</a></li><li><a href="#ipq">IP 质量检测</a></li><li><a href="#verdict">适用场景与建议</a></li><li><a href="#raw">原始结果归档</a></li></ol></nav>
 <section id="profile"><h2>一、基本配置核对</h2>
 <h3>商家与套餐</h3><div class="tw"><table><thead><tr><th>项目</th><th>内容</th></tr></thead><tbody><tr><td>商家</td><td>DMIT</td></tr><tr><td>套餐名</td><td>HKG.AN5.EB.Tiny</td></tr><tr><td>机房</td><td>中国香港 HKG</td></tr><tr><td>线路宣传</td><td>三网优化 / 去程直连回程 CN2 GIA</td></tr><tr><td>月流量</td><td>1TB</td></tr><tr><td>带宽</td><td>1Gbps</td></tr><tr><td>价格</td><td>9.90 AUD / 月付</td></tr></tbody></table></div>
 <h3>宣传配置 vs 实测配置</h3><div class="tw"><table><thead><tr><th>项目</th><th>宣传值</th><th>实测值</th><th>核对</th></tr></thead><tbody><tr><td>CPU 核数</td><td>1</td><td>1 核</td><td class="ok">✅ 相符</td></tr><tr><td>内存</td><td>1GB</td><td>984.27 MB</td><td class="warn">⚠️ 略低</td></tr><tr><td>硬盘</td><td>20GB</td><td>19.56 GB</td><td class="ok">✅ 相符</td></tr><tr><td>IPv4 数量</td><td>1</td><td>1 个</td><td class="ok">✅ 相符</td></tr><tr><td>IPv6 数量</td><td>1</td><td>1 个</td><td class="ok">✅ 相符</td></tr></tbody></table></div>
@@ -98,7 +116,7 @@ a{color:var(--accent)}
 <div class="tw"><table><thead><tr><th>探针节点</th><th>线路识别</th></tr></thead><tbody><tr><td>广东广州电信</td><td>电信 CN2 GIA (AS4809) / 电信 163 骨干 (AS4134)</td></tr><tr><td>广西南宁电信</td><td>电信 CN2 GIA (AS4809) / 电信 163 骨干 (AS4134)</td></tr><tr><td>浙江杭州电信</td><td>电信 CN2 GIA (AS4809) / 电信 163 骨干 (AS4134)</td></tr><tr><td>浙江杭州联通</td><td>联通 169 骨干 (AS4837)</td></tr><tr><td>广东广州移动</td><td>移动 CMI (AS58453) / 移动 CMNET (AS9808)</td></tr><tr><td>广东深圳移动</td><td>移动 CMI (AS58453) / 移动 CMNET (AS9808)</td></tr></tbody></table></div>
 <p><b>去程线路结论：</b>电信 CN2 GIA (AS4809) / 电信 163 骨干 (AS4134)；联通 169 骨干 (AS4837)；移动 CMI (AS58453) / 移动 CMNET (AS9808)</p></section>
 <section id="inmtr"><h2>五、去程 MTR</h2>
-<p class="na">⚠️ <b>本次未取得有效数据</b>：本次未取得有效去程 MTR 数据，丢包与抖动未评估</p></section>
+<p class="na">⚠️ 本次未取得有效去程 MTR 数据，丢包与抖动未评估</p></section>
 <section id="netq"><h2>六、回程网络质量（NetQuality）</h2>
 <h3>BGP 与注册信息</h3><div class="tw"><table><thead><tr><th>项目</th><th>内容</th></tr></thead><tbody><tr><td>BGP 前缀 Prefix</td><td>154.31.112.0/24</td></tr><tr><td>Origin AS</td><td>AS3335</td></tr><tr><td>网络组织 Holder</td><td>DMIT-AS</td></tr><tr><td>宣告 IPv4 前缀数</td><td>37 条</td></tr><tr><td>宣告 IPv6 前缀数</td><td>12 条</td></tr><tr><td>注册主体 Netname</td><td>DMIT-HK-NET</td></tr><tr><td>注册地区</td><td>US</td></tr><tr><td>注册日期</td><td>2019-04-11</td></tr><tr><td>最后修改日期</td><td>2025-11-02</td></tr><tr><td>注册局 RIR</td><td>ARIN（北美）</td></tr></tbody></table></div>
 <h3>上游与对等互联</h3><div class="tw"><table><thead><tr><th>项目</th><th>内容</th></tr></thead><tbody><tr><td>上游数量 Upstream</td><td>6 个</td></tr><tr><td>下游数量 Downstream</td><td>2 个</td></tr><tr><td>PeeringDB 名称</td><td>DMIT</td></tr><tr><td>网络类型</td><td>NSP</td></tr><tr><td>覆盖范围</td><td>Global</td></tr><tr><td>互联网交换点 IXP 数量</td><td>4 个</td></tr></tbody></table></div>
