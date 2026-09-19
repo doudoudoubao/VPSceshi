@@ -37,20 +37,20 @@ install_speedtest() {
   return 1
 }
 
-# 按关键词搜索服务器 ID
+# 按关键词搜索服务器，返回多个候选 ID（空格分隔）
+#
+# Ookla 的服务器会下线、改 ID，写死单个 ID 迟早失效；而且就算 ID 有效，
+# 那台服务器也可能临时拒连。所以这里一次拿回多个候选，调用方逐个试。
 st_find_server() {
-  local kw="$1"
-  local j
+  local kw="$1" j
   j="$(xcurl --get --data-urlencode "search=$kw" \
-      "https://www.speedtest.net/api/js/servers?engine=js&limit=5")"
+      "https://www.speedtest.net/api/js/servers?engine=js&limit=10")"
   [ -z "$j" ] && return 1
-  local id
   if have jq; then
-    id="$(printf '%s' "$j" | jq -r '.[0].id // empty' 2>/dev/null)"
+    printf '%s' "$j" | jq -r '.[].id // empty' 2>/dev/null | head -5 | tr '\n' ' '
   else
-    id="$(printf '%s' "$j" | grep -oE '"id":"?[0-9]+' | head -1 | grep -oE '[0-9]+')"
+    printf '%s' "$j" | grep -oE '"id":"?[0-9]+' | grep -oE '[0-9]+' | head -5 | tr '\n' ' '
   fi
-  [ -n "$id" ] && printf '%s' "$id"
 }
 
 # 运行一次测速：st_run <服务器ID或空>
@@ -119,26 +119,38 @@ EOF
 
 _run_node_list() {
   local table="$1" list="$2" limit="$3"
-  local n=0 label kw fbid sid res
+  local n=0 label kw fbid res
   while IFS='|' read -r label kw fbid; do
     [ -z "$label" ] && continue
     [ "$limit" -gt 0 ] && [ "$n" -ge "$limit" ] && break
     n=$((n + 1))
     inline "$label"
-    sid="$(st_find_server "$kw")"
-    [ -z "$sid" ] && sid="$fbid"
-    res="$(st_run "$sid")"
-    if [ -z "$res" ] && [ -n "$fbid" ] && [ "$sid" != "$fbid" ]; then
-      res="$(st_run "$fbid")"
-    fi
-    if [ -n "$res" ]; then
+
+    # 候选顺序：动态搜索结果（最多 5 个）→ 内置备用 ID
+    local cands sid tried=0 found=0
+    cands="$(st_find_server "$kw")"
+    [ -n "$fbid" ] && cands="$cands $fbid"
+    res=""
+    for sid in $cands; do
+      [ -z "$sid" ] && continue
+      tried=$((tried + 1))
+      # 最多试 3 台，再多就是浪费时间和流量
+      [ "$tried" -gt 3 ] && break
+      res="$(st_run "$sid")"
+      [ -n "$res" ] && { found=1; break; }
+    done
+
+    if [ "$found" = "1" ]; then
       local dl ul pg jt nm lc
       IFS='|' read -r dl ul pg jt nm lc <<< "$res"
-      inline_done "↓ ${dl} Mbps  ↑ ${ul} Mbps  ${pg} ms"
+      inline_done "↓ ${dl} ↑ ${ul} Mbps  ${pg} ms"
       row_add "$table" "$label" "${dl} Mbps" "${ul} Mbps" "${pg} ms" "${jt} ms" "${nm:-$kw}"
+    elif [ "$tried" = "0" ]; then
+      inline_done "无可用服务器"
+      row_add "$table" "$label" "N/A" "N/A" "N/A" "N/A" "未找到该地区的测速服务器"
     else
-      inline_done "失败"
-      row_add "$table" "$label" "N/A" "N/A" "N/A" "N/A" "测速失败"
+      inline_done "失败（试了 ${tried} 台）"
+      row_add "$table" "$label" "N/A" "N/A" "N/A" "N/A" "试了 ${tried} 台服务器均连接失败"
     fi
   done <<< "$list"
 }

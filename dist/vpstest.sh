@@ -8,7 +8,7 @@
 # 一键运行：
 #   bash <(curl -sL https://github.com/doudoudoubao/VPSceshi/raw/main/dist/vpstest.sh)
 #
-# 生成时间： 2026-09-19 16:15:18 UTC
+# 生成时间： 2026-09-19 16:24:41 UTC
 # ============================================================
 
 set -o pipefail
@@ -2345,20 +2345,20 @@ install_speedtest() {
   return 1
 }
 
-# 按关键词搜索服务器 ID
+# 按关键词搜索服务器，返回多个候选 ID（空格分隔）
+#
+# Ookla 的服务器会下线、改 ID，写死单个 ID 迟早失效；而且就算 ID 有效，
+# 那台服务器也可能临时拒连。所以这里一次拿回多个候选，调用方逐个试。
 st_find_server() {
-  local kw="$1"
-  local j
+  local kw="$1" j
   j="$(xcurl --get --data-urlencode "search=$kw" \
-      "https://www.speedtest.net/api/js/servers?engine=js&limit=5")"
+      "https://www.speedtest.net/api/js/servers?engine=js&limit=10")"
   [ -z "$j" ] && return 1
-  local id
   if have jq; then
-    id="$(printf '%s' "$j" | jq -r '.[0].id // empty' 2>/dev/null)"
+    printf '%s' "$j" | jq -r '.[].id // empty' 2>/dev/null | head -5 | tr '\n' ' '
   else
-    id="$(printf '%s' "$j" | grep -oE '"id":"?[0-9]+' | head -1 | grep -oE '[0-9]+')"
+    printf '%s' "$j" | grep -oE '"id":"?[0-9]+' | grep -oE '[0-9]+' | head -5 | tr '\n' ' '
   fi
-  [ -n "$id" ] && printf '%s' "$id"
 }
 
 # 运行一次测速：st_run <服务器ID或空>
@@ -2427,26 +2427,38 @@ EOF
 
 _run_node_list() {
   local table="$1" list="$2" limit="$3"
-  local n=0 label kw fbid sid res
+  local n=0 label kw fbid res
   while IFS='|' read -r label kw fbid; do
     [ -z "$label" ] && continue
     [ "$limit" -gt 0 ] && [ "$n" -ge "$limit" ] && break
     n=$((n + 1))
     inline "$label"
-    sid="$(st_find_server "$kw")"
-    [ -z "$sid" ] && sid="$fbid"
-    res="$(st_run "$sid")"
-    if [ -z "$res" ] && [ -n "$fbid" ] && [ "$sid" != "$fbid" ]; then
-      res="$(st_run "$fbid")"
-    fi
-    if [ -n "$res" ]; then
+
+    # 候选顺序：动态搜索结果（最多 5 个）→ 内置备用 ID
+    local cands sid tried=0 found=0
+    cands="$(st_find_server "$kw")"
+    [ -n "$fbid" ] && cands="$cands $fbid"
+    res=""
+    for sid in $cands; do
+      [ -z "$sid" ] && continue
+      tried=$((tried + 1))
+      # 最多试 3 台，再多就是浪费时间和流量
+      [ "$tried" -gt 3 ] && break
+      res="$(st_run "$sid")"
+      [ -n "$res" ] && { found=1; break; }
+    done
+
+    if [ "$found" = "1" ]; then
       local dl ul pg jt nm lc
       IFS='|' read -r dl ul pg jt nm lc <<< "$res"
-      inline_done "↓ ${dl} Mbps  ↑ ${ul} Mbps  ${pg} ms"
+      inline_done "↓ ${dl} ↑ ${ul} Mbps  ${pg} ms"
       row_add "$table" "$label" "${dl} Mbps" "${ul} Mbps" "${pg} ms" "${jt} ms" "${nm:-$kw}"
+    elif [ "$tried" = "0" ]; then
+      inline_done "无可用服务器"
+      row_add "$table" "$label" "N/A" "N/A" "N/A" "N/A" "未找到该地区的测速服务器"
     else
-      inline_done "失败"
-      row_add "$table" "$label" "N/A" "N/A" "N/A" "N/A" "测速失败"
+      inline_done "失败（试了 ${tried} 台）"
+      row_add "$table" "$label" "N/A" "N/A" "N/A" "N/A" "试了 ${tried} 台服务器均连接失败"
     fi
   done <<< "$list"
 }
@@ -2650,18 +2662,33 @@ EOF
 }
 
 _trace_one() {
-  local ip="$1" out
+  local ip="$1" out=""
   if [ -n "$NT_BIN" ]; then
-    out="$(run_to 35 "$NT_BIN" -M -q 1 -n --map=false "$ip" 2>/dev/null)"
+    # 不要加 -n：那会关掉解析，输出里就没有 AS 号，线路判定全废。
+    # 也不要 -M / --map=false 混用，两者互相矛盾。
+    out="$(run_to 35 "$NT_BIN" -q 1 --nocolor "$ip" 2>/dev/null)"
     [ -z "$out" ] && out="$(run_to 35 "$NT_BIN" -q 1 "$ip" 2>/dev/null)"
-  elif have mtr; then
-    out="$(run_to 35 mtr -r -c 3 -n "$ip" 2>/dev/null)"
-  elif have traceroute; then
+  fi
+  # nexttrace 没结果就退回系统工具（这些没有 AS 标注，只能靠 IP 段识别）
+  if [ -z "$out" ] && have mtr; then
+    out="$(run_to 35 mtr -r -c 3 "$ip" 2>/dev/null)"
+  fi
+  if [ -z "$out" ] && have traceroute; then
     out="$(run_to 35 traceroute -q 1 -w 1 -m 20 "$ip" 2>/dev/null)"
-  elif have tracepath; then
+  fi
+  if [ -z "$out" ] && have tracepath; then
     out="$(run_to 35 tracepath -m 20 "$ip" 2>/dev/null)"
   fi
   printf '%s' "$out"
+}
+
+# 数有效跳数（能识别出 IP 的跳），用来判断追踪是不是根本没走通
+_trace_hops() {
+  printf '%s' "$1" | grep -cE '^[[:space:]]*[0-9]+[.|[:space:]]' 2>/dev/null
+}
+# 数「无响应」的跳
+_trace_stars() {
+  printf '%s' "$1" | grep -cE '\*|\?\?\?' 2>/dev/null
 }
 
 # 从路由文本粗略识别线路类型（去程/回程通用）
@@ -2689,10 +2716,26 @@ _guess_line() {
   case "$txt" in *AS6453*|*TATA*)           _hit "TATA (AS6453)" ;; esac
   case "$txt" in *AS7473*|*Singtel*)        _hit "Singtel (AS7473)" ;; esac
   case "$txt" in *AS4637*|*Telstra*)        _hit "Telstra Global (AS4637)" ;; esac
-  case "$txt" in *AS3491*|*PCCW*)           _hit "PCCW (AS3491)" ;; esac
+  case "$txt" in *AS3491*|*PCCW*|*63.218.*|*202.79.*) _hit "PCCW (AS3491)" ;; esac
+  case "$txt" in *AS2497*|*IIJ*)            _hit "IIJ (AS2497)" ;; esac
+  case "$txt" in *AS17676*|*Softbank*|*SoftBank*) _hit "Softbank (AS17676)" ;; esac
+  case "$txt" in *AS4134*)                  _hit "电信 163 骨干 (AS4134)" ;; esac
+  case "$txt" in *AS4809*)                  _hit "电信 CN2 (AS4809)" ;; esac
 
   unset -f _hit
-  [ -z "$hit" ] && hit="常规路由（未识别到已知骨干）"
+  if [ -z "$hit" ]; then
+    # 没匹配到骨干时，把原因说清楚：是追踪没走通，还是走通了但线路不在识别表里
+    local hops stars
+    hops="$(_trace_hops "$txt")"
+    stars="$(_trace_stars "$txt")"
+    if [ "${hops:-0}" -lt 3 ]; then
+      hit="追踪受阻（仅 ${hops:-0} 跳，ICMP 可能被限制）"
+    elif [ "${stars:-0}" -ge "$(( ${hops:-1} / 2 ))" ]; then
+      hit="多数跳无响应（${hops} 跳中 ${stars} 跳超时）"
+    else
+      hit="未识别到已知骨干（${hops} 跳，详见原始输出）"
+    fi
+  fi
   printf '%s' "$hit"
 }
 
@@ -2881,20 +2924,38 @@ parse_inbound_route() {
   return 0
 }
 
-# 汇总某张路由表里出现的线路类型，给一句结论
+# 汇总某张路由表里出现的线路类型，给一句结论。
+# 只统计真正识别出骨干的条目——「追踪受阻」「未识别到已知骨干」这些是
+# 诊断信息，混进结论里会让人以为那就是线路名。
 _summarize_route() {
   local table="$1" outkey="$2"
-  local line seen="" v
+  local line seen="" v total=0 named=0
   while IFS= read -r line; do
     [ -z "$line" ] && continue
     row_split "$line"
     v="${ROW_F[${#ROW_F[@]}-1]}"
+    total=$((total + 1))
+    # 只有带 AS 号的才算识别出了骨干
+    case "$v" in
+      *AS[0-9]*) ;;
+      *) continue ;;
+    esac
+    named=$((named + 1))
     case "$seen" in
       *"$v"*) ;;
       *) seen="${seen:+$seen；}$v" ;;
     esac
   done <<< "$(rows_get "$table")"
-  [ -n "$seen" ] && kv_set "$outkey" "$seen"
+
+  if [ -n "$seen" ]; then
+    # 有一部分没识别出来的话说明白，别让读者以为全测出来了
+    if [ "$named" -lt "$total" ]; then
+      seen="$seen（${total} 个目标中 ${named} 个识别出骨干）"
+    fi
+    kv_set "$outkey" "$seen"
+  elif [ "$total" -gt 0 ]; then
+    kv_set "$outkey" "${total} 个目标均未识别出已知骨干（可能是 ICMP 受限或线路不在识别表内，详见原始输出）"
+  fi
 }
 
 test_inbound() {

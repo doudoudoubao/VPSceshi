@@ -138,20 +138,38 @@ parse_inbound_route() {
   return 0
 }
 
-# 汇总某张路由表里出现的线路类型，给一句结论
+# 汇总某张路由表里出现的线路类型，给一句结论。
+# 只统计真正识别出骨干的条目——「追踪受阻」「未识别到已知骨干」这些是
+# 诊断信息，混进结论里会让人以为那就是线路名。
 _summarize_route() {
   local table="$1" outkey="$2"
-  local line seen="" v
+  local line seen="" v total=0 named=0
   while IFS= read -r line; do
     [ -z "$line" ] && continue
     row_split "$line"
     v="${ROW_F[${#ROW_F[@]}-1]}"
+    total=$((total + 1))
+    # 只有带 AS 号的才算识别出了骨干
+    case "$v" in
+      *AS[0-9]*) ;;
+      *) continue ;;
+    esac
+    named=$((named + 1))
     case "$seen" in
       *"$v"*) ;;
       *) seen="${seen:+$seen；}$v" ;;
     esac
   done <<< "$(rows_get "$table")"
-  [ -n "$seen" ] && kv_set "$outkey" "$seen"
+
+  if [ -n "$seen" ]; then
+    # 有一部分没识别出来的话说明白，别让读者以为全测出来了
+    if [ "$named" -lt "$total" ]; then
+      seen="$seen（${total} 个目标中 ${named} 个识别出骨干）"
+    fi
+    kv_set "$outkey" "$seen"
+  elif [ "$total" -gt 0 ]; then
+    kv_set "$outkey" "${total} 个目标均未识别出已知骨干（可能是 ICMP 受限或线路不在识别表内，详见原始输出）"
+  fi
 }
 
 test_inbound() {

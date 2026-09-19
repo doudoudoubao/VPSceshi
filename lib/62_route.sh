@@ -42,18 +42,33 @@ EOF
 }
 
 _trace_one() {
-  local ip="$1" out
+  local ip="$1" out=""
   if [ -n "$NT_BIN" ]; then
-    out="$(run_to 35 "$NT_BIN" -M -q 1 -n --map=false "$ip" 2>/dev/null)"
+    # 不要加 -n：那会关掉解析，输出里就没有 AS 号，线路判定全废。
+    # 也不要 -M / --map=false 混用，两者互相矛盾。
+    out="$(run_to 35 "$NT_BIN" -q 1 --nocolor "$ip" 2>/dev/null)"
     [ -z "$out" ] && out="$(run_to 35 "$NT_BIN" -q 1 "$ip" 2>/dev/null)"
-  elif have mtr; then
-    out="$(run_to 35 mtr -r -c 3 -n "$ip" 2>/dev/null)"
-  elif have traceroute; then
+  fi
+  # nexttrace 没结果就退回系统工具（这些没有 AS 标注，只能靠 IP 段识别）
+  if [ -z "$out" ] && have mtr; then
+    out="$(run_to 35 mtr -r -c 3 "$ip" 2>/dev/null)"
+  fi
+  if [ -z "$out" ] && have traceroute; then
     out="$(run_to 35 traceroute -q 1 -w 1 -m 20 "$ip" 2>/dev/null)"
-  elif have tracepath; then
+  fi
+  if [ -z "$out" ] && have tracepath; then
     out="$(run_to 35 tracepath -m 20 "$ip" 2>/dev/null)"
   fi
   printf '%s' "$out"
+}
+
+# 数有效跳数（能识别出 IP 的跳），用来判断追踪是不是根本没走通
+_trace_hops() {
+  printf '%s' "$1" | grep -cE '^[[:space:]]*[0-9]+[.|[:space:]]' 2>/dev/null
+}
+# 数「无响应」的跳
+_trace_stars() {
+  printf '%s' "$1" | grep -cE '\*|\?\?\?' 2>/dev/null
 }
 
 # 从路由文本粗略识别线路类型（去程/回程通用）
@@ -81,10 +96,26 @@ _guess_line() {
   case "$txt" in *AS6453*|*TATA*)           _hit "TATA (AS6453)" ;; esac
   case "$txt" in *AS7473*|*Singtel*)        _hit "Singtel (AS7473)" ;; esac
   case "$txt" in *AS4637*|*Telstra*)        _hit "Telstra Global (AS4637)" ;; esac
-  case "$txt" in *AS3491*|*PCCW*)           _hit "PCCW (AS3491)" ;; esac
+  case "$txt" in *AS3491*|*PCCW*|*63.218.*|*202.79.*) _hit "PCCW (AS3491)" ;; esac
+  case "$txt" in *AS2497*|*IIJ*)            _hit "IIJ (AS2497)" ;; esac
+  case "$txt" in *AS17676*|*Softbank*|*SoftBank*) _hit "Softbank (AS17676)" ;; esac
+  case "$txt" in *AS4134*)                  _hit "电信 163 骨干 (AS4134)" ;; esac
+  case "$txt" in *AS4809*)                  _hit "电信 CN2 (AS4809)" ;; esac
 
   unset -f _hit
-  [ -z "$hit" ] && hit="常规路由（未识别到已知骨干）"
+  if [ -z "$hit" ]; then
+    # 没匹配到骨干时，把原因说清楚：是追踪没走通，还是走通了但线路不在识别表里
+    local hops stars
+    hops="$(_trace_hops "$txt")"
+    stars="$(_trace_stars "$txt")"
+    if [ "${hops:-0}" -lt 3 ]; then
+      hit="追踪受阻（仅 ${hops:-0} 跳，ICMP 可能被限制）"
+    elif [ "${stars:-0}" -ge "$(( ${hops:-1} / 2 ))" ]; then
+      hit="多数跳无响应（${hops} 跳中 ${stars} 跳超时）"
+    else
+      hit="未识别到已知骨干（${hops} 跳，详见原始输出）"
+    fi
+  fi
   printf '%s' "$hit"
 }
 
