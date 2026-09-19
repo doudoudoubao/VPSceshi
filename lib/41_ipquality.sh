@@ -124,39 +124,82 @@ test_ipquality() {
     [ -n "$colo" ] && { kv_set ipq.cf_colo "$colo"; row_add ipq_risk "Cloudflare 接入 POP" "$colo（国家判定: ${loc:-N/A}）"; }
   fi
 
-  # ---------- 4. 邮件黑名单 ----------
+  # ---------- 4. 原生 / 广播判定 ----------
+  # 判据：IP 段的注册国（RDAP）与实际地理定位国是否一致。
+  # 一致 = 原生 IP；不一致 = 该段在别处注册、广播到当前位置使用。
+  inline "原生 / 广播判定 ..."
+  local reg_cc geo_cc verdict reason
+  reg_cc="$(kv_get nq.rdap_cc)"
+  geo_cc="$(kv_get net.cc)"
+  if [ -z "$reg_cc" ] || [ -z "$geo_cc" ]; then
+    verdict="⚠️ 无法判定"
+    reason="缺少注册国或定位国信息"
+  elif [ "$reg_cc" = "$geo_cc" ]; then
+    verdict="✅ 原生 IP"
+    reason="注册地 ${reg_cc} 与定位地 ${geo_cc} 一致"
+  else
+    verdict="📡 广播 IP"
+    reason="注册地 ${reg_cc}，实际广播/定位在 ${geo_cc}"
+  fi
+  inline_done "$verdict"
+  kv_set ipq.native "$verdict"
+  kv_set ipq.native_reason "$reason"
+  row_add ipq_native "IP 类型判定" "$verdict"
+  row_add ipq_native "判定依据"   "$reason"
+  [ -n "$reg_cc" ] && row_add ipq_native "注册国（RDAP）" "$reg_cc"
+  [ -n "$geo_cc" ] && row_add ipq_native "定位国（GeoIP）" "$geo_cc"
+  [ -n "$(kv_get nq.prefix)" ]    && row_add ipq_native "所属前缀" "$(kv_get nq.prefix)"
+  [ -n "$(kv_get nq.rdap_name)" ] && row_add ipq_native "注册主体" "$(kv_get nq.rdap_name)"
+  [ -n "$(kv_get nq.rir)" ]       && row_add ipq_native "注册局 RIR" "$(kv_get nq.rir)"
+
+  # ---------- 5. 邮件黑名单 ----------
+  # 分两档：主流黑名单命中影响大（黑名单），次级库命中记为「已标记」
   inline "DNSBL 黑名单检测 ..."
-  local rbls=(
+  local rbls_major=(
     "zen.spamhaus.org"
     "bl.spamcop.net"
     "b.barracudacentral.org"
+    "cbl.abuseat.org"
+  )
+  local rbls_minor=(
     "dnsbl.sorbs.net"
     "spam.dnsbl.sorbs.net"
     "psbl.surriel.com"
-    "cbl.abuseat.org"
     "dnsbl-1.uceprotect.net"
     "ubl.unsubscore.com"
     "all.s5h.net"
   )
-  local listed=0 clean=0 skipped=0 r
-  for rbl in "${rbls[@]}"; do
+  local blacklisted=0 flagged=0 clean=0 skipped=0 r rbl
+  for rbl in "${rbls_major[@]}"; do
     r="$(_rbl_check "$IP4" "$rbl")"
     case "$r" in
-      LISTED) listed=$((listed + 1)); row_add ipq_rbl "$rbl" "❌ 已列入黑名单" ;;
-      CLEAN)  clean=$((clean + 1));   row_add ipq_rbl "$rbl" "✅ 干净" ;;
+      LISTED) blacklisted=$((blacklisted + 1)); row_add ipq_rbl "$rbl" "主流" "❌ 黑名单" ;;
+      CLEAN)  clean=$((clean + 1));             row_add ipq_rbl "$rbl" "主流" "✅ 正常" ;;
       *)      skipped=$((skipped + 1)) ;;
     esac
   done
-  inline_done "干净 ${clean} / 命中 ${listed}"
-  kv_set ipq.rbl_listed "$listed"
+  for rbl in "${rbls_minor[@]}"; do
+    r="$(_rbl_check "$IP4" "$rbl")"
+    case "$r" in
+      LISTED) flagged=$((flagged + 1)); row_add ipq_rbl "$rbl" "次级" "⚠️ 已标记" ;;
+      CLEAN)  clean=$((clean + 1));     row_add ipq_rbl "$rbl" "次级" "✅ 正常" ;;
+      *)      skipped=$((skipped + 1)) ;;
+    esac
+  done
+  local valid=$(( clean + flagged + blacklisted ))
+  inline_done "正常 ${clean} / 标记 ${flagged} / 黑名单 ${blacklisted}"
+  kv_set ipq.rbl_listed "$(( blacklisted + flagged ))"
+  kv_set ipq.rbl_black  "$blacklisted"
+  kv_set ipq.rbl_flag   "$flagged"
   kv_set ipq.rbl_clean  "$clean"
-  if [ "$skipped" -gt 0 ] && [ "$clean" = "0" ] && [ "$listed" = "0" ]; then
-    kv_set ipq.rbl_summary "未检测（缺少 dig/host）"
+  kv_set ipq.rbl_valid  "$valid"
+  if [ "$valid" = "0" ]; then
+    kv_set ipq.rbl_summary "未检测（缺少 dig/host 等解析工具）"
   else
-    kv_set ipq.rbl_summary "${clean} 个干净 / ${listed} 个命中（共 $((clean + listed)) 个库）"
+    kv_set ipq.rbl_summary "有效 ${valid} 个 / 正常 ${clean} 个 / 已标记 ${flagged} 个 / 黑名单 ${blacklisted} 个"
   fi
 
-  # ---------- 5. 端口与邮局 ----------
+  # ---------- 6. 端口与邮局 ----------
   inline "出站端口检测 ..."
   local p25 p465 p587
   _port_open "smtp.gmail.com" 25  6 && p25="✅ 放行"  || p25="❌ 封锁"

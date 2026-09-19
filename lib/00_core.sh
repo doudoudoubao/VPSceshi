@@ -17,6 +17,7 @@ NODE_NAME=""          # 机器名，用于报告标题
 ONLY_MODULES=""       # 逗号分隔白名单
 SKIP_MODULES=""       # 逗号分隔黑名单
 ENABLE_GEEKBENCH=0
+ENABLE_IPERF=0
 ENABLE_UPLOAD=0
 FAST_MODE=0
 SPEEDTEST_MODE="cn"   # cn | global | all | off
@@ -92,6 +93,16 @@ raw_add() {
   RAWS["$1"]="$2"
   RAW_ORDER+=("$1")
 }
+
+# 「本次未取得有效数据」标记。
+# 测评页面里很多章节会因为探针不可用而拿不到数据，报告要照样把
+# 章节列出来并写清原因，而不是整节消失。
+# na_set <章节键> <原因>
+na_set() { kv_set "na.$1" "$2"; }
+na_get() { kv_get "na.$1"; }
+na_has() { [ -n "$(kv_get "na.$1")" ]; }
+# 章节是否需要渲染：有数据，或有「未取得」说明
+sect_show() { rows_have "$1" || na_has "$1"; }
 
 # ---------- 通用工具 ----------
 have() { command -v "$1" >/dev/null 2>&1; }

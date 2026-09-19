@@ -28,15 +28,16 @@ install_nexttrace() {
 # 回程路由目标
 _route_targets() {
   cat <<'EOF'
+广州电信|58.60.188.222
 北京电信|219.141.140.10
 上海电信|202.96.209.133
-广州电信|58.60.188.222
+茂名联通|120.234.0.1
 北京联通|202.106.195.68
 上海联通|210.22.97.1
 广州联通|210.21.196.6
-北京移动|221.183.129.101
 上海移动|211.136.112.200
-广州移动|120.196.165.24
+深圳移动|120.196.165.24
+北京移动|221.183.129.101
 EOF
 }
 
@@ -55,27 +56,35 @@ _trace_one() {
   printf '%s' "$out"
 }
 
-# 从路由文本粗略识别线路类型
+# 从路由文本粗略识别线路类型（去程/回程通用）
 _guess_line() {
   local txt="$1"
   local hit=""
-  case "$txt" in
-    *59.43.*)                      hit="CN2 GIA (AS4809/59.43)" ;;
-    *202.97.*)                     hit="电信 163 骨干 (AS4134)" ;;
-  esac
-  case "$txt" in
-    *"AS9929"*|*9929*)             hit="${hit:+$hit / }联通 A网 CUII (AS9929)" ;;
-  esac
-  case "$txt" in
-    *"AS4837"*|*219.158.*)         hit="${hit:+$hit / }联通 169 骨干 (AS4837)" ;;
-  esac
-  case "$txt" in
-    *"AS58807"*|*"CMIN2"*)         hit="${hit:+$hit / }移动 CMIN2 (AS58807)" ;;
-  esac
-  case "$txt" in
-    *"AS58453"*|*223.120.*)        hit="${hit:+$hit / }移动 CMI (AS58453)" ;;
-  esac
-  [ -z "$hit" ] && hit="常规路由"
+  _hit() { case "$hit" in *"$1"*) ;; *) hit="${hit:+$hit / }$1" ;; esac; }
+
+  # —— 国内三网骨干 ——
+  case "$txt" in *59.43.*)                  _hit "电信 CN2 GIA (AS4809)" ;; esac
+  case "$txt" in *202.97.*)                 _hit "电信 163 骨干 (AS4134)" ;; esac
+  case "$txt" in *AS9929*|*218.105.*|*218.241.*) _hit "联通 A网 CUII (AS9929)" ;; esac
+  case "$txt" in *AS4837*|*219.158.*)       _hit "联通 169 骨干 (AS4837)" ;; esac
+  case "$txt" in *AS58807*|*CMIN2*|*223.118.*) _hit "移动 CMIN2 (AS58807)" ;; esac
+  case "$txt" in *AS58453*|*CMI*|*223.120.*)   _hit "移动 CMI (AS58453)" ;; esac
+  case "$txt" in *AS9808*|*AS56048*)        _hit "移动 CMNET (AS9808)" ;; esac
+
+  # —— 国际骨干 ——
+  case "$txt" in *AS2914*|*NTT*|*129.250.*) _hit "NTT (AS2914)" ;; esac
+  case "$txt" in *AS3356*|*Level3*|*Lumen*|*4.68.*|*4.69.*) _hit "Lumen/Level3 (AS3356)" ;; esac
+  case "$txt" in *AS174*|*Cogent*|*154.54.*) _hit "Cogent (AS174)" ;; esac
+  case "$txt" in *AS6939*|*"Hurricane"*)    _hit "HE.net (AS6939)" ;; esac
+  case "$txt" in *AS1299*|*Arelion*|*Telia*) _hit "Arelion/Telia (AS1299)" ;; esac
+  case "$txt" in *AS3257*|*GTT*)            _hit "GTT (AS3257)" ;; esac
+  case "$txt" in *AS6453*|*TATA*)           _hit "TATA (AS6453)" ;; esac
+  case "$txt" in *AS7473*|*Singtel*)        _hit "Singtel (AS7473)" ;; esac
+  case "$txt" in *AS4637*|*Telstra*)        _hit "Telstra Global (AS4637)" ;; esac
+  case "$txt" in *AS3491*|*PCCW*)           _hit "PCCW (AS3491)" ;; esac
+
+  unset -f _hit
+  [ -z "$hit" ] && hit="常规路由（未识别到已知骨干）"
   printf '%s' "$hit"
 }
 
@@ -109,4 +118,11 @@ test_route() {
       row_add route "$label" "$ip" "追踪失败"
     fi
   done <<< "$(_route_targets)"
+
+  if rows_have route; then
+    _summarize_route route route.verdict
+    [ -n "$(kv_get route.verdict)" ] && log_ok "回程线路：$(kv_get route.verdict)"
+  else
+    na_set route "回程路由未取得有效数据"
+  fi
 }

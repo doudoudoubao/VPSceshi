@@ -110,7 +110,14 @@ collect_sysinfo() {
   memused=$(( ${memtotal:-0} - ${memavail:-0} ))
   kv_set sys.mem.total "$(human_kb "${memtotal:-0}")"
   kv_set sys.mem.used  "$(human_kb "$memused")"
+  kv_set sys.mem.avail "$(human_kb "${memavail:-0}")"
   kv_set sys.mem.summary "$(human_kb "$memused") / $(human_kb "${memtotal:-0}")"
+  # Buff/Cache：free 命令口径 = Buffers + Cached + SReclaimable
+  local buffers cached sreclaim
+  buffers="$(awk '/^Buffers:/{print $2}' /proc/meminfo 2>/dev/null)"
+  cached="$(awk '/^Cached:/{print $2}' /proc/meminfo 2>/dev/null)"
+  sreclaim="$(awk '/^SReclaimable:/{print $2}' /proc/meminfo 2>/dev/null)"
+  kv_set sys.mem.buff "$(human_kb $(( ${buffers:-0} + ${cached:-0} + ${sreclaim:-0} )))"
   if [ "${swaptotal:-0}" -gt 0 ] 2>/dev/null; then
     kv_set sys.swap.summary "$(human_kb $(( swaptotal - ${swapfree:-0} ))) / $(human_kb "$swaptotal")"
   else

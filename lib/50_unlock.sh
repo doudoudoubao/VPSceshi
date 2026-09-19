@@ -274,6 +274,162 @@ u_wikipedia() {
   case "$c" in 200) printf '%s' "$OK" ;; *) printf '%s' "$NO" ;; esac
 }
 
+# 维基百科可编辑性：IP 段被全域封禁时编辑页会给出封禁提示
+u_wikipedia_edit() {
+  local body
+  body="$(ucurl "https://en.wikipedia.org/w/index.php?title=Special:MyPage&action=edit")"
+  [ -z "$body" ] && { printf '%s' "$NA"; return; }
+  case "$body" in
+    *"currently unable to edit"*|*"Your IP address is in a range that has been blocked"*|\
+    *"blockedtext"*|*"autoblockedtext"*)
+        printf '❌ 不可编辑（IP 段被封）' ;;
+    *"wpTextbox1"*|*"editform"*)
+        printf '✅ 可编辑' ;;
+    *)  printf '%s' "$NA" ;;
+  esac
+}
+
+# Netflix 优选 CDN：fast.com 的公开测速接口会返回实际分配的 CDN 主机名
+u_netflix_cdn() {
+  local j host
+  j="$(ucurl "https://api.fast.com/netflix/speedtest/v2?https=true&token=YXNkZmFzZGxmbnNkYWZoYXNkZmhrYWxm&urlCount=1")"
+  [ -z "$j" ] && { printf '未知'; return; }
+  host="$(jget "$j" '.targets[0].location.city')"
+  local url; url="$(jget "$j" '.targets[0].url')"
+  local node; node="$(printf '%s' "$url" | grep -oE 'ipv[46]-c[0-9]+-[a-z]{3}[0-9]+' | head -1)"
+  if [ -n "$host" ] && [ -n "$node" ]; then printf '%s (%s)' "$node" "$host"
+  elif [ -n "$node" ]; then printf '%s' "$node"
+  elif [ -n "$host" ]; then printf '%s' "$host"
+  else printf '未知'; fi
+}
+
+u_viu_com() {
+  local j cc
+  j="$(ucurl "https://www.viu.com/ott/web/api/container/load?platform_flag_label=web&area_id=5&language_flag_id=1&os_flag_id=1&containerId=playlist-24856884")"
+  if [ -n "$j" ]; then
+    case "$j" in *'"status":"success"'*|*'"data"'*) printf '%s' "$OK"; return ;; esac
+  fi
+  cc="$(ucode "https://www.viu.com/")"
+  case "$cc" in 200) printf '%s' "$NA" ;; *) printf '%s' "$NO" ;; esac
+}
+
+u_viu_tv() {
+  local body
+  body="$(ucurl "https://api.viu.now.com/p8/3/getLiveURL" -X POST \
+    -H 'Content-Type: application/json' \
+    -d '{"callerReferenceNo":"20210208","channelno":"001","mode":"prod","deviceId":"0","deviceType":"ANDROID_WEB"}')"
+  case "$body" in
+    *'"responseCode":"SUCCESS"'*) printf '%s（香港）' "$OK" ;;
+    *GEO_CHECK_FAIL*|*NOT_IN_COVERAGE*) printf '%s' "$NO" ;;
+    "") printf '%s' "$NA" ;;
+    *)  printf '%s' "$NA" ;;
+  esac
+}
+
+u_mytvsuper() {
+  local j region
+  j="$(ucurl "https://www.mytvsuper.com/api/auth/getSession/self/?platform=web")"
+  region="$(jget "$j" '.region')"
+  [ -z "$region" ] && region="$(printf '%s' "$j" | grep -oE '"region":"[A-Za-z]+"' | head -1 | cut -d'"' -f4)"
+  case "$region" in
+    HK|hk) printf '%s（香港）' "$OK" ;;
+    "")    printf '%s' "$NO" ;;
+    *)     printf '⚠️ 非港区（%s）' "$region" ;;
+  esac
+}
+
+u_nowe() {
+  local body
+  body="$(ucurl -X POST -H 'Content-Type: application/json' \
+    -d '{"contentId":"202105121001","contentType":"Vod","pin":"","deviceName":"Browser","deviceId":"","deviceType":"WEB","secureCookie":null,"callerReferenceNo":"","profileId":null}' \
+    "https://webtvapi.nowe.com/16/1/getVodURL")"
+  case "$body" in
+    *'"responseCode":"SUCCESS"'*)       printf '%s（香港）' "$OK" ;;
+    *GEO_CHECK_FAIL*|*'"responseCode"'*) printf '%s' "$NO" ;;
+    *) printf '%s' "$NA" ;;
+  esac
+}
+
+u_sonyliv() {
+  local j cc
+  j="$(ucurl "https://apiv2.sonyliv.com/AGL/1.4/A/ENG/WEB/IN/CONTENT/DETAIL/BUNDLE/1700000001")"
+  cc="$(jget "$j" '.resultObj.location.country')"
+  case "$j" in
+    *"geo"*"block"*|*GEO_LOCATION_BLOCKED*) printf '%s' "$NO"; return ;;
+  esac
+  if [ -n "$cc" ]; then printf '%s（区域: %s）' "$OK" "$cc"
+  else
+    local c; c="$(ucode "https://www.sonyliv.com/")"
+    case "$c" in 200) printf '%s' "$NA" ;; *) printf '%s' "$NO" ;; esac
+  fi
+}
+
+u_iqiyi() {
+  local hdr region
+  hdr="$(ucurl -D - -o /dev/null "https://www.iq.com/")"
+  region="$(printf '%s' "$hdr" | grep -i '^set-cookie:' | grep -oE 'mod=[a-z_]+' | head -1 | cut -d= -f2)"
+  case "$region" in
+    "")            printf '%s' "$NO" ;;
+    intl|intl_*)   printf '%s（国际版: %s）' "$OK" "$region" ;;
+    *)             printf '%s（%s）' "$OK" "$region" ;;
+  esac
+}
+
+u_gundam_gge() {
+  # SD Gundam G Generation Eternal：官方站点做了地区限制
+  local c; c="$(ucode "https://www.gundam-gge.jp/")"
+  case "$c" in
+    200)     printf '%s' "$OK" ;;
+    403|451) printf '%s' "$NO" ;;
+    *)       printf '%s' "$NA" ;;
+  esac
+}
+
+u_google_play() {
+  local body cc
+  body="$(ucurl "https://play.google.com/store/apps")"
+  cc="$(printf '%s' "$body" | grep -oE '"countryCode":"[A-Z]{2}"' | head -1 | cut -d'"' -f4)"
+  [ -z "$cc" ] && cc="$(printf '%s' "$body" | grep -oE 'gl=[A-Z]{2}' | head -1 | cut -d= -f2)"
+  if [ -n "$cc" ]; then printf '✅ %s' "$cc"; else printf '%s' "$NA"; fi
+}
+
+u_apple_region() {
+  # Apple 的地理定位端点，直接返回两位国家码
+  local cc; cc="$(ucurl "https://gspe1-ssl.ls.apple.com/pep/gcc")"
+  cc="$(trim "$cc")"
+  case "$cc" in
+    [A-Z][A-Z]) printf '✅ %s' "$cc" ;;
+    *)          printf '%s' "$NA" ;;
+  esac
+}
+
+u_bing_region() {
+  local body cc
+  body="$(ucurl -D - "https://www.bing.com/")"
+  cc="$(printf '%s' "$body" | grep -oE 'Region:"?[A-Z]{2}' | head -1 | grep -oE '[A-Z]{2}$')"
+  [ -z "$cc" ] && cc="$(printf '%s' "$body" | grep -oE '"countryCode":"[A-Z]{2}"' | head -1 | cut -d'"' -f4)"
+  if [ -n "$cc" ]; then printf '✅ %s' "$cc"; else printf '%s' "$NA"; fi
+}
+
+u_onetrust_region() {
+  local j cc st
+  j="$(ucurl "https://geolocation.onetrust.com/cookieconsentpub/v1/geo/location")"
+  # 返回体可能带 JSONP 包裹，先剥掉
+  j="$(printf '%s' "$j" | sed 's/^[^{]*//; s/[^}]*$//')"
+  cc="$(jget "$j" '.country')"
+  st="$(jget "$j" '.state')"
+  if [ -n "$cc" ]; then printf '✅ %s%s' "$cc" "${st:+ / $st}"; else printf '%s' "$NA"; fi
+}
+
+u_reddit() {
+  local c; c="$(ucode "https://www.reddit.com/")"
+  case "$c" in
+    200|301|302) printf '%s' "$OK" ;;
+    403|451)     printf '%s' "$NO" ;;
+    *)           printf '%s' "$NA" ;;
+  esac
+}
+
 u_google_search() {
   local c; c="$(ucode "https://www.google.com/search?q=hello")"
   case "$c" in 200) printf '✅ 正常' ;; 429|403) printf '❌ 触发验证码' ;; *) printf '%s' "$NA" ;; esac
@@ -287,30 +443,47 @@ _run_unlock_suite() {
   local table="$1"
   UNLOCK_RATE=""
   local -a items=(
+    # —— 流媒体 / 视频 ——
     "Netflix|u_netflix"
+    "Netflix 优选 CDN|u_netflix_cdn"
     "Disney+|u_disney"
     "YouTube Premium|u_youtube_premium"
+    "YouTube CDN 节点|u_youtube_cdn"
     "Amazon Prime Video|u_primevideo"
     "Max (HBO Max)|u_hbomax"
     "Paramount+|u_paramount"
     "DAZN|u_dazn"
-    "Spotify 注册|u_spotify"
-    "TikTok|u_tiktok"
-    "Steam 商店|u_steam"
-    "ChatGPT|u_chatgpt"
-    "Google Gemini|u_gemini"
-    "Claude AI|u_claude"
+    "Viu.com|u_viu_com"
+    "Viu.TV|u_viu_tv"
+    "MyTVSuper|u_mytvsuper"
+    "Now E|u_nowe"
+    "TVB Anywhere+|u_tvbanywhere"
     "巴哈姆特動畫瘋|u_bahamut"
+    "Bilibili 港澳台|u_bilibili_hkmotw"
+    "Bilibili 台湾限定|u_bilibili_tw"
     "AbemaTV|u_abema"
     "DMM|u_dmm"
     "Hulu 日本|u_hulujp"
-    "TVB Anywhere+|u_tvbanywhere"
-    "Bilibili 港澳台|u_bilibili_hkmotw"
-    "Bilibili 台湾限定|u_bilibili_tw"
-    "维基百科|u_wikipedia"
-    "Google 搜索|u_google_search"
+    "SonyLiv|u_sonyliv"
+    "iQiyi 海外版|u_iqiyi"
+    "SD Gundam G Generation Eternal|u_gundam_gge"
+    "TikTok|u_tiktok"
+    # —— AI / 账号地区 / 其他 ——
+    "ChatGPT|u_chatgpt"
+    "Google Gemini|u_gemini"
+    "Claude AI|u_claude"
+    "Google 搜索无验证码|u_google_search"
+    "Google Play 商店地区|u_google_play"
+    "Apple 地区|u_apple_region"
+    "Bing 地区|u_bing_region"
+    "OneTrust 地区|u_onetrust_region"
+    "Spotify 注册|u_spotify"
+    "Steam 货币区|u_steam"
+    "Reddit|u_reddit"
+    "维基百科访问|u_wikipedia"
+    "维基百科可编辑性|u_wikipedia_edit"
   )
-  local total=0 pass=0
+  local total=0 pass=0 fail=0 err=0 misc=0
   local it name fn r
   for it in "${items[@]}"; do
     name="${it%%|*}"; fn="${it##*|}"
@@ -320,21 +493,37 @@ _run_unlock_suite() {
     inline_done "$r"
     res_add "$table" "$name" "$r"
     total=$((total + 1))
-    case "$r" in ✅*) pass=$((pass + 1)) ;; esac
+    # 按结果归类：可用 / 不可用 / 失败（待确认）/ 难归类（返回的是地区码等信息）
+    case "$r" in
+      ✅*)  pass=$((pass + 1)); res_add "${table}_ok"   "$name" "$r" ;;
+      ❌*)  fail=$((fail + 1)); res_add "${table}_no"   "$name" "$r" ;;
+      ⚠️*)  err=$((err + 1));   res_add "${table}_err"  "$name" "$r" ;;
+      *)    misc=$((misc + 1)); res_add "${table}_misc" "$name" "$r" ;;
+    esac
   done
   UNLOCK_RATE="${pass}/${total}"
+  kv_set "${table}.ok"   "$pass"
+  kv_set "${table}.no"   "$fail"
+  kv_set "${table}.err"  "$err"
+  kv_set "${table}.misc" "$misc"
 }
 
 test_unlock() {
   module_enabled unlock || { log_info "跳过流媒体解锁检测"; return 0; }
+
+  # 网络识别：解锁结果跟出口网络强相关，先把网络身份记下来
+  row_add unlock_net "出口网络"   "$(kv_or net.as '未知')"
+  row_add unlock_net "归属组织"   "$(kv_or net.org '未知')"
+  row_add unlock_net "IPv4 出口"  "$(kv_or net.ip4 '无')"
+  row_add unlock_net "IPv6 出口"  "$(kv_or net.ip6 '无')"
+  [ -n "$(kv_get nq.prefix)" ] && row_add unlock_net "IPv4 前缀" "$(kv_get nq.prefix)"
 
   if [ "$IPV4_OK" = "1" ]; then
     step "流媒体 / AI 解锁检测（IPv4）"
     UL_STACK=4
     _run_unlock_suite unlock4
     kv_set unlock.v4.summary "$UNLOCK_RATE"
-    kv_set unlock.v4.ytcdn "$(u_youtube_cdn)"
-    log_ok "IPv4 解锁通过率: $UNLOCK_RATE"
+    log_ok "IPv4 解锁通过率: $UNLOCK_RATE（可用 $(kv_get unlock4.ok) / 不可用 $(kv_get unlock4.no) / 待确认 $(kv_get unlock4.err) / 难归类 $(kv_get unlock4.misc)）"
   fi
 
   if [ "$IPV6_OK" = "1" ]; then

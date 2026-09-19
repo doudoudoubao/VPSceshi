@@ -34,6 +34,9 @@ kv_set sys.cpu.cache "L1d: 48 KiB  L2: 1.3 MiB  L3: 54 MiB"
 kv_set sys.cpu.aes   "✔ 已启用"
 kv_set sys.cpu.virt  "✘ 未启用"
 kv_set sys.mem.summary  "128.44 MB / 984.27 MB"
+kv_set sys.mem.total    "984.27 MB"
+kv_set sys.mem.avail    "855.83 MB"
+kv_set sys.mem.buff     "212.60 MB"
 kv_set sys.swap.summary "0 B / 512.00 MB"
 kv_set sys.disk.summary "2.13 GB / 19.56 GB"
 kv_set sys.disk.fs      "ext4"
@@ -56,11 +59,36 @@ kv_set net.isp      "DMIT"
 kv_set net.rdns     "无"
 kv_set net.tz       "Asia/Hong_Kong"
 
+# —— 第 1 章：基本配置核对 ——
+P_VENDOR="DMIT"; P_PLAN="HKG.AN5.EB.Tiny"; P_DC="中国香港 HKG"
+P_LINE="三网优化 / 去程直连回程 CN2 GIA"
+P_CPU="1"; P_RAM="1GB"; P_DISK="20GB"; P_TRAFFIC="1TB"; P_BANDWIDTH="1Gbps"
+P_IPV4="1"; P_IPV6="1"; P_PRICE="9.90"; P_CURRENCY="AUD"; P_CYCLE="月付"
+row_add profile_base "商家"     "DMIT"
+row_add profile_base "套餐名"   "HKG.AN5.EB.Tiny"
+row_add profile_base "机房"     "中国香港 HKG"
+row_add profile_base "线路宣传" "三网优化 / 去程直连回程 CN2 GIA"
+row_add profile_base "月流量"   "1TB"
+row_add profile_base "带宽"     "1Gbps"
+row_add profile_base "价格"     "9.90 AUD / 月付"
+row_add profile_cmp "CPU 核数"  "1"     "1 核"       "✅ 相符"
+row_add profile_cmp "内存"      "1GB"   "984.27 MB"  "⚠️ 略低"
+row_add profile_cmp "硬盘"      "20GB"  "19.56 GB"   "✅ 相符"
+row_add profile_cmp "IPv4 数量" "1"     "1 个"       "✅ 相符"
+row_add profile_cmp "IPv6 数量" "1"     "1 个"       "✅ 相符"
+kv_set profile.price "9.90 AUD / 月付"
+kv_set profile.traffic "1TB"
+
 # CPU
 row_add cpu "sysbench 单核"          "1462.38 events/s"
 row_add cpu "7-Zip 综合 (1 线程)"    "4211 MIPS"
 row_add cpu "OpenSSL AES-256-CBC"    "1382 MB/s (8KB 块)"
+row_add cpu "Geekbench 6 单核"       "1688"
+row_add cpu "Geekbench 6 多核"       "1702"
 kv_set cpu.sysbench.single "1462.38"
+kv_set cpu.gb6.single "1688"
+kv_set cpu.gb6.multi  "1702"
+kv_set cpu.gb6.link   "https://browser.geekbench.com/v6/cpu/12345678"
 
 # 内存
 row_add memory "内存读取 (sysbench 1M)" "11.82 GB/s  (12103 MB/s)"
@@ -95,44 +123,133 @@ row_add ipq_risk "Scamalytics 欺诈分" "12 / 100（低风险）"
 row_add ipq_risk "AbuseIPDB 滥用置信度" "0%"
 row_add ipq_risk "Cloudflare 接入 POP"  "HKG（国家判定: HK）"
 kv_set ipq.scamalytics "12"
-for rbl in zen.spamhaus.org bl.spamcop.net b.barracudacentral.org dnsbl.sorbs.net psbl.surriel.com; do
-  row_add ipq_rbl "$rbl" "✅ 干净"
+
+# —— 第 6 章：回程网络质量 / BGP ——
+kv_set nq.prefix "154.31.112.0/24"
+kv_set nq.holder "DMIT-AS"
+kv_set nq.rdap_cc "US"
+kv_set nq.rdap_name "DMIT-HK-NET"
+kv_set nq.rir "ARIN（北美）"
+kv_set nq.ixp_count "4"
+row_add nq_bgp "BGP 前缀 Prefix"   "154.31.112.0/24"
+row_add nq_bgp "Origin AS"         "AS3335"
+row_add nq_bgp "网络组织 Holder"   "DMIT-AS"
+row_add nq_bgp "宣告 IPv4 前缀数"  "37 条"
+row_add nq_bgp "宣告 IPv6 前缀数"  "12 条"
+row_add nq_bgp "注册主体 Netname"  "DMIT-HK-NET"
+row_add nq_bgp "注册地区"          "US"
+row_add nq_bgp "注册日期"          "2019-04-11"
+row_add nq_bgp "最后修改日期"      "2025-11-02"
+row_add nq_bgp "注册局 RIR"        "ARIN（北美）"
+row_add nq_peer "上游数量 Upstream"        "6 个"
+row_add nq_peer "下游数量 Downstream"      "2 个"
+row_add nq_peer "PeeringDB 名称"           "DMIT"
+row_add nq_peer "网络类型"                 "NSP"
+row_add nq_peer "覆盖范围"                 "Global"
+row_add nq_peer "互联网交换点 IXP 数量"    "4 个"
+row_add nq_ixp "HKIX"          "10 Gbps"
+row_add nq_ixp "Equinix HK"    "10 Gbps"
+row_add nq_ixp "Megaport HK"   "10 Gbps"
+row_add nq_ixp "AMS-IX HK"     "10 Gbps"
+row_add nq_local "TCP 拥塞控制算法" "bbr"
+row_add nq_local "队列调度算法"     "fq"
+row_add nq_local "可用拥塞算法"     "reno cubic bbr"
+row_add nq_local "IP 转发"          "未开启"
+row_add nq_local "接口 MTU"         "1500"
+row_add nq_local "IPv6 支持"        "✅ 可用"
+
+# 回程 MTR
+row_add mtr_out "广州电信" "58.60.188.222"  "0.0%" "12.8 ms" "12.1 / 14.6 ms" "0.7 ms"
+row_add mtr_out "上海联通" "210.22.97.1"    "0.0%" "35.4 ms" "34.8 / 38.2 ms" "1.1 ms"
+row_add mtr_out "上海移动" "211.136.112.200" "1.0%" "45.2 ms" "44.1 / 62.7 ms" "5.4 ms"
+
+# —— 原生 / 广播判定 ——
+kv_set ipq.native "📡 广播 IP"
+kv_set ipq.native_reason "注册地 US，实际广播/定位在 HK"
+row_add ipq_native "IP 类型判定"    "📡 广播 IP"
+row_add ipq_native "判定依据"       "注册地 US，实际广播/定位在 HK"
+row_add ipq_native "注册国（RDAP）"  "US"
+row_add ipq_native "定位国（GeoIP）" "HK"
+row_add ipq_native "所属前缀"        "154.31.112.0/24"
+row_add ipq_native "注册主体"        "DMIT-HK-NET"
+row_add ipq_native "注册局 RIR"      "ARIN（北美）"
+for rbl in zen.spamhaus.org bl.spamcop.net b.barracudacentral.org cbl.abuseat.org; do
+  row_add ipq_rbl "$rbl" "主流" "✅ 正常"
 done
-row_add ipq_rbl "dnsbl-1.uceprotect.net" "❌ 已列入黑名单"
+for rbl in dnsbl.sorbs.net spam.dnsbl.sorbs.net psbl.surriel.com ubl.unsubscore.com all.s5h.net; do
+  row_add ipq_rbl "$rbl" "次级" "✅ 正常"
+done
+row_add ipq_rbl "dnsbl-1.uceprotect.net" "次级" "⚠️ 已标记"
 kv_set ipq.rbl_listed "1"
-kv_set ipq.rbl_summary "5 个干净 / 1 个命中（共 6 个库）"
+kv_set ipq.rbl_black  "0"
+kv_set ipq.rbl_flag   "1"
+kv_set ipq.rbl_clean  "9"
+kv_set ipq.rbl_valid  "10"
+kv_set ipq.rbl_summary "有效 10 个 / 正常 9 个 / 已标记 1 个 / 黑名单 0 个"
 row_add ipq_port "TCP 25（SMTP 明文）"   "❌ 封锁"
 row_add ipq_port "TCP 465（SMTPS）"      "✅ 放行"
 row_add ipq_port "TCP 587（Submission）" "✅ 放行"
 row_add ipq_port "Google (www.google.com:443)" "✅ 可达"
 row_add ipq_port "GitHub (github.com:443)"     "✅ 可达"
 
-# 解锁
-add_ul() { row_add unlock4 "$1" "$2"; }
-add_ul "Netflix"              "✅ 解锁（区域: HK）"
-add_ul "Disney+"              "✅ 解锁（区域: HK）"
-add_ul "YouTube Premium"      "✅ 解锁（区域: HK）"
-add_ul "Amazon Prime Video"   "✅ 解锁（区域: HK）"
-add_ul "Max (HBO Max)"        "❌ 失败"
-add_ul "Paramount+"           "❌ 失败"
-add_ul "DAZN"                 "✅ 解锁（区域: HK）"
-add_ul "Spotify 注册"         "✅ 解锁（区域: HK）"
-add_ul "TikTok"               "✅ 解锁（区域: HK）"
-add_ul "Steam 商店"           "✅ 解锁（货币区: HKD）"
-add_ul "ChatGPT"              "✅ 解锁（区域: HK）"
-add_ul "Google Gemini"        "✅ 解锁"
-add_ul "Claude AI"            "✅ 解锁"
-add_ul "巴哈姆特動畫瘋"       "❌ 失败"
-add_ul "AbemaTV"              "⚠️ 仅海外内容（HK）"
-add_ul "DMM"                  "❌ 失败"
-add_ul "Hulu 日本"            "❌ 失败"
-add_ul "TVB Anywhere+"        "✅ 解锁"
-add_ul "Bilibili 港澳台"      "✅ 解锁"
-add_ul "Bilibili 台湾限定"    "❌ 失败"
-add_ul "维基百科"             "✅ 解锁"
-add_ul "Google 搜索"          "✅ 正常"
-kv_set unlock.v4.summary "16/22"
-kv_set unlock.v4.ytcdn   "hkg07s25"
+# —— 第 9 章：流媒体与在线服务解锁 ——
+row_add unlock_net "出口网络"  "AS3335 DMIT"
+row_add unlock_net "归属组织"  "DMIT Cloud Services"
+row_add unlock_net "IPv4 出口" "154.31.*.*"
+row_add unlock_net "IPv6 出口" "2404:f4c0:f45::****"
+row_add unlock_net "IPv4 前缀" "154.31.112.0/24"
+
+# 灌数据时同时写入总表和分组表，模拟 _run_unlock_suite 的行为
+n_ok=0; n_no=0; n_err=0; n_misc=0
+add_ul() {
+  row_add unlock4 "$1" "$2"
+  case "$2" in
+    ✅*) n_ok=$((n_ok+1));   row_add unlock4_ok   "$1" "$2" ;;
+    ❌*) n_no=$((n_no+1));   row_add unlock4_no   "$1" "$2" ;;
+    ⚠️*) n_err=$((n_err+1)); row_add unlock4_err  "$1" "$2" ;;
+    *)   n_misc=$((n_misc+1)); row_add unlock4_misc "$1" "$2" ;;
+  esac
+}
+add_ul "Netflix"                        "✅ 解锁（区域: HK）"
+add_ul "Netflix 优选 CDN"               "ipv4-c003-hkg001 (Hong Kong)"
+add_ul "Disney+"                        "✅ 解锁（区域: HK）"
+add_ul "YouTube Premium"                "✅ 解锁（区域: HK）"
+add_ul "YouTube CDN 节点"               "hkg07s25"
+add_ul "Amazon Prime Video"             "✅ 解锁（区域: HK）"
+add_ul "Max (HBO Max)"                  "❌ 失败"
+add_ul "Paramount+"                     "❌ 失败"
+add_ul "DAZN"                           "✅ 解锁（区域: HK）"
+add_ul "Viu.com"                        "✅ 解锁"
+add_ul "Viu.TV"                         "✅ 解锁（香港）"
+add_ul "MyTVSuper"                      "✅ 解锁（香港）"
+add_ul "Now E"                          "✅ 解锁（香港）"
+add_ul "TVB Anywhere+"                  "✅ 解锁"
+add_ul "巴哈姆特動畫瘋"                 "❌ 失败"
+add_ul "Bilibili 港澳台"                "✅ 解锁"
+add_ul "Bilibili 台湾限定"              "❌ 失败"
+add_ul "AbemaTV"                        "⚠️ 仅海外内容（HK）"
+add_ul "DMM"                            "❌ 失败"
+add_ul "Hulu 日本"                      "❌ 失败"
+add_ul "SonyLiv"                        "❌ 失败"
+add_ul "iQiyi 海外版"                   "✅ 解锁（intl）"
+add_ul "SD Gundam G Generation Eternal" "⚠️ 待确认"
+add_ul "TikTok"                         "✅ 解锁（区域: HK）"
+add_ul "ChatGPT"                        "✅ 解锁（区域: HK）"
+add_ul "Google Gemini"                  "✅ 解锁"
+add_ul "Claude AI"                      "✅ 解锁"
+add_ul "Google 搜索无验证码"            "✅ 正常"
+add_ul "Google Play 商店地区"           "✅ HK"
+add_ul "Apple 地区"                     "✅ HK"
+add_ul "Bing 地区"                      "✅ HK"
+add_ul "OneTrust 地区"                  "✅ HK / HK"
+add_ul "Spotify 注册"                   "✅ 解锁（区域: HK）"
+add_ul "Steam 货币区"                   "✅ 解锁（货币区: HKD）"
+add_ul "Reddit"                         "✅ 解锁"
+add_ul "维基百科访问"                   "✅ 解锁"
+add_ul "维基百科可编辑性"               "❌ 不可编辑（IP 段被封）"
+kv_set unlock.v4.summary "$((n_ok))/$((n_ok+n_no+n_err+n_misc))"
+kv_set unlock4.ok "$n_ok"; kv_set unlock4.no "$n_no"
+kv_set unlock4.err "$n_err"; kv_set unlock4.misc "$n_misc"
 row_add unlock6 "Netflix"         "✅ 解锁（区域: HK）"
 row_add unlock6 "YouTube Premium" "✅ 解锁（区域: HK）"
 row_add unlock6 "ChatGPT"         "❌ 失败"
@@ -186,8 +303,24 @@ traceroute to 202.96.209.133, 30 hops max
 RAW
 )"
 
-# ---------- 评分并出报告 ----------
+# —— 第 8 章：国际节点带宽（iperf3）——
+row_add iperf "新加坡 Leaseweb 10G"     "921.44 Mbps" "887.12 Mbps" "34.2 ms"
+row_add iperf "洛杉矶 Clouvider 10G"    "412.88 Mbps" "388.51 Mbps" "152.9 ms"
+row_add iperf "伦敦 Clouvider 10G"      "288.31 Mbps" "265.07 Mbps" "196.4 ms"
+row_add iperf "阿姆斯特丹 Eranium 100G" "301.62 Mbps" "279.88 Mbps" "188.7 ms"
+row_add iperf "纽约 Leaseweb 10G"       "342.19 Mbps" "318.44 Mbps" "212.3 ms"
+
+# —— 第 3/4/5 章：去程数据，直接用 examples/ 下的样例文件跑真实解析 ——
+[ -r "$ROOT/examples/inbound-ping.csv" ]  && parse_inbound_ping  "$ROOT/examples/inbound-ping.csv"  >/dev/null 2>&1
+[ -r "$ROOT/examples/inbound-route.txt" ] && parse_inbound_route "$ROOT/examples/inbound-route.txt" >/dev/null 2>&1
+na_set inbound_mtr "本次未取得有效去程 MTR 数据，丢包与抖动未评估"
+
+# 回程路由结论：真实流程里由 test_route 汇总，这里补上
+_summarize_route route route.verdict
+
+# ---------- 评分、结论并出报告 ----------
 calc_score >/dev/null 2>&1
+build_verdict >/dev/null 2>&1
 
 mkdir -p "$OUT"
 gen_markdown > "$OUT/sample-report.md"
@@ -206,12 +339,31 @@ fail=0
 check() { if eval "$2"; then echo "  [OK]  $1"; else echo "  [FAIL] $1"; fail=1; fi; }
 echo
 echo "校验:"
-check "JSON 合法"          "jq -e . '$OUT/sample-report.json' >/dev/null 2>&1 || ! command -v jq >/dev/null"
-check "Markdown 含评分表"  "grep -q '综合评分' '$OUT/sample-report.md'"
-check "Markdown 含所有章节" "[ \$(grep -c '^## ' '$OUT/sample-report.md') -ge 9 ]"
-check "BBCode 表格闭合"    "[ \$(grep -c '\[table\]' '$OUT/sample-report.bbcode') -eq \$(grep -c '\[/table\]' '$OUT/sample-report.bbcode') ]"
-check "BBCode 无残留 emoji" "! grep -q '✅' '$OUT/sample-report.bbcode'"
-check "HTML 结构完整"      "grep -q '</html>' '$OUT/sample-report.html'"
-check "HTML 无未闭合表格"  "[ \$(grep -o '<table' '$OUT/sample-report.html' | wc -l) -eq \$(grep -o '</table>' '$OUT/sample-report.html' | wc -l) ]"
-check "TXT 含路由章节"     "grep -q '回程路由' '$OUT/sample-report.txt'"
+check "JSON 合法"           "jq -e . '$OUT/sample-report.json' >/dev/null 2>&1 || ! command -v jq >/dev/null"
+check "Markdown 含评分表"   "grep -q '综合评分' '$OUT/sample-report.md'"
+check "Markdown 含 12 章"   "[ \$(grep -c '^## [一二三四五六七八九十]' '$OUT/sample-report.md') -eq 12 ]"
+check "BBCode 表格闭合"     "[ \$(grep -c '\[table\]' '$OUT/sample-report.bbcode') -eq \$(grep -c '\[/table\]' '$OUT/sample-report.bbcode') ]"
+check "BBCode 无残留 emoji"  "! grep -q '✅' '$OUT/sample-report.bbcode'"
+check "HTML 结构完整"       "grep -q '</html>' '$OUT/sample-report.html'"
+check "HTML 表格闭合"       "[ \$(grep -o '<table' '$OUT/sample-report.html' | wc -l) -eq \$(grep -o '</table>' '$OUT/sample-report.html' | wc -l) ]"
+check "HTML section 闭合"   "[ \$(grep -o '<section' '$OUT/sample-report.html' | wc -l) -eq \$(grep -o '</section>' '$OUT/sample-report.html' | wc -l) ]"
+check "HTML details 闭合"   "[ \$(grep -o '<details' '$OUT/sample-report.html' | wc -l) -eq \$(grep -o '</details>' '$OUT/sample-report.html' | wc -l) ]"
+# 逐章检查，防止改报告生成器时漏掉某一节
+for sec in 基本配置核对 性能与硬件检测 去程延迟测试 去程路由测试 去程MTR \
+           回程网络质量 回程路由测试 网络测速 流媒体与在线服务解锁 \
+           IP质量检测 适用场景与购买建议 原始结果归档; do
+  pat="$(printf '%s' "$sec" | sed 's/MTR/ MTR/; s/IP质量/IP 质量/')"
+  check "MD 含「$pat」" "grep -q '$pat' '$OUT/sample-report.md'"
+  check "HTML 含「$pat」" "grep -q '$pat' '$OUT/sample-report.html'"
+done
+check "去程延迟已按运营商汇总" "grep -q '中国电信' '$OUT/sample-report.md'"
+check "去程延迟已按大区汇总"   "grep -q '华东' '$OUT/sample-report.md'"
+check "去程路由识别出线路"     "grep -q 'CN2 GIA' '$OUT/sample-report.md'"
+check "去程 MTR 标注未取得"    "grep -q '未取得有效去程 MTR 数据' '$OUT/sample-report.md'"
+check "解锁结果已分组"         "grep -q '难归类' '$OUT/sample-report.md'"
+check "含原生/广播判定"        "grep -q '广播 IP' '$OUT/sample-report.md'"
+check "含 BGP 前缀"            "grep -q '154.31.112.0/24' '$OUT/sample-report.md'"
+check "含 FAQ"                 "grep -q '数据会变吗\|这些数据会变吗' '$OUT/sample-report.md'"
+check "含 Geekbench 链接"      "grep -q 'browser.geekbench.com' '$OUT/sample-report.md'"
+check "TXT 含 12 章"           "[ \$(grep -c '^\[ [一二三四五六七八九十]' '$OUT/sample-report.txt') -eq 12 ]"
 exit "$fail"
