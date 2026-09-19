@@ -1,0 +1,112 @@
+#!/usr/bin/env bash
+# ============================================================
+# 62_route.sh — 三网回程路由追踪（nexttrace，回退 traceroute/mtr）
+# ============================================================
+
+NT_BIN=""
+
+install_nexttrace() {
+  have nexttrace && { NT_BIN="$(command -v nexttrace)"; return 0; }
+  local arch; arch="$(arch_tag)"
+  case "$arch" in
+    amd64) a="amd64" ;; arm64) a="arm64" ;; armv7) a="armv7" ;; i386) a="386" ;;
+    *) log_warn "nexttrace 不支持架构 $(uname -m)"; return 1 ;;
+  esac
+  local f="$BIN_DIR/nexttrace"
+  log_info "下载 nexttrace ($a) ..."
+  if fetch_first "$f" \
+      "https://github.com/nxtrace/NTrace-core/releases/latest/download/nexttrace_linux_${a}" \
+      "https://ghfast.top/https://github.com/nxtrace/NTrace-core/releases/latest/download/nexttrace_linux_${a}" \
+      "https://gh-proxy.com/https://github.com/nxtrace/NTrace-core/releases/latest/download/nexttrace_linux_${a}"; then
+    chmod +x "$f" 2>/dev/null
+    if "$f" --version >/dev/null 2>&1; then NT_BIN="$f"; return 0; fi
+  fi
+  log_warn "nexttrace 下载失败，将回退到 traceroute/mtr"
+  return 1
+}
+
+# 回程路由目标
+_route_targets() {
+  cat <<'EOF'
+北京电信|219.141.140.10
+上海电信|202.96.209.133
+广州电信|58.60.188.222
+北京联通|202.106.195.68
+上海联通|210.22.97.1
+广州联通|210.21.196.6
+北京移动|221.183.129.101
+上海移动|211.136.112.200
+广州移动|120.196.165.24
+EOF
+}
+
+_trace_one() {
+  local ip="$1" out
+  if [ -n "$NT_BIN" ]; then
+    out="$(run_to 90 "$NT_BIN" -M -q 1 -n --map=false "$ip" 2>/dev/null)"
+    [ -z "$out" ] && out="$(run_to 90 "$NT_BIN" -q 1 "$ip" 2>/dev/null)"
+  elif have mtr; then
+    out="$(run_to 90 mtr -r -c 3 -n "$ip" 2>/dev/null)"
+  elif have traceroute; then
+    out="$(run_to 90 traceroute -q 1 -w 2 -m 20 "$ip" 2>/dev/null)"
+  elif have tracepath; then
+    out="$(run_to 90 tracepath -m 20 "$ip" 2>/dev/null)"
+  fi
+  printf '%s' "$out"
+}
+
+# 从路由文本粗略识别线路类型
+_guess_line() {
+  local txt="$1"
+  local hit=""
+  case "$txt" in
+    *59.43.*)                      hit="CN2 GIA (AS4809/59.43)" ;;
+    *202.97.*)                     hit="电信 163 骨干 (AS4134)" ;;
+  esac
+  case "$txt" in
+    *"AS9929"*|*9929*)             hit="${hit:+$hit / }联通 A网 CUII (AS9929)" ;;
+  esac
+  case "$txt" in
+    *"AS4837"*|*219.158.*)         hit="${hit:+$hit / }联通 169 骨干 (AS4837)" ;;
+  esac
+  case "$txt" in
+    *"AS58807"*|*"CMIN2"*)         hit="${hit:+$hit / }移动 CMIN2 (AS58807)" ;;
+  esac
+  case "$txt" in
+    *"AS58453"*|*223.120.*)        hit="${hit:+$hit / }移动 CMI (AS58453)" ;;
+  esac
+  [ -z "$hit" ] && hit="常规路由"
+  printf '%s' "$hit"
+}
+
+test_route() {
+  module_enabled route || { log_info "跳过路由追踪"; return 0; }
+  step "三网回程路由追踪"
+
+  if [ "$(id -u)" != "0" ]; then
+    log_warn "非 root 运行，路由追踪可能无法发送 ICMP 探测包"
+  fi
+  install_nexttrace || true
+  if [ -z "$NT_BIN" ] && ! have mtr && ! have traceroute && ! have tracepath; then
+    log_warn "无可用的路由追踪工具，跳过"
+    return 0
+  fi
+
+  local label ip out line n=0
+  while IFS='|' read -r label ip; do
+    [ -z "$label" ] && continue
+    n=$((n + 1))
+    [ "$FAST_MODE" = "1" ] && [ "$n" -gt 3 ] && break
+    inline "$label ($ip) ..."
+    out="$(_trace_one "$ip")"
+    if [ -n "$out" ]; then
+      line="$(_guess_line "$out")"
+      inline_done "$line"
+      row_add route "$label" "$ip" "$line"
+      raw_add "回程路由 · $label ($ip)" "$out"
+    else
+      inline_done "失败"
+      row_add route "$label" "$ip" "追踪失败"
+    fi
+  done <<< "$(_route_targets)"
+}

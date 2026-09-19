@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DMIT HKG.AN5.EB.Tiny 服务器测评报告</title>
+<style>
+:root{
+  --bg:#f6f7f9; --card:#ffffff; --fg:#1f2329; --muted:#6b7280; --line:#e5e7eb;
+  --accent:#2b6cb0; --ok:#15803d; --no:#b91c1c; --warn:#b45309;
+  --thead:#f1f5f9; --zebra:#fafbfc; --code:#f3f4f6;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0f1115; --card:#171a21; --fg:#e5e7eb; --muted:#9ca3af; --line:#262b34;
+    --accent:#63a4ff; --ok:#4ade80; --no:#f87171; --warn:#fbbf24;
+    --thead:#1e222a; --zebra:#1b1e25; --code:#11141a;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0f1115; --card:#171a21; --fg:#e5e7eb; --muted:#9ca3af; --line:#262b34;
+  --accent:#63a4ff; --ok:#4ade80; --no:#f87171; --warn:#fbbf24;
+  --thead:#1e222a; --zebra:#1b1e25; --code:#11141a;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  line-height:1.65;font-size:15px}
+.wrap{max-width:1040px;margin:0 auto;padding:32px 16px 64px}
+header{text-align:center;margin-bottom:28px}
+header h1{font-size:26px;margin:0 0 8px;letter-spacing:.3px}
+header .meta{color:var(--muted);font-size:13px}
+.score{background:var(--card);border:1px solid var(--line);border-radius:14px;
+  padding:20px;margin:0 0 24px;text-align:center}
+.score .big{font-size:40px;font-weight:700;color:var(--accent);line-height:1.1}
+.score .grade{font-size:15px;color:var(--muted);margin-top:4px}
+.bars{margin-top:16px;text-align:left}
+.bar{margin:8px 0}
+.bar .lab{display:flex;justify-content:space-between;font-size:13px;color:var(--muted);margin-bottom:3px}
+.bar .track{height:8px;background:var(--line);border-radius:6px;overflow:hidden}
+.bar .fill{height:100%;background:var(--accent);border-radius:6px}
+section{background:var(--card);border:1px solid var(--line);border-radius:14px;
+  padding:18px 20px;margin:0 0 20px}
+section h2{font-size:18px;margin:0 0 14px;padding-bottom:8px;border-bottom:2px solid var(--accent);
+  display:inline-block}
+section h3{font-size:15px;margin:18px 0 8px;color:var(--muted)}
+.tw{overflow-x:auto;-webkit-overflow-scrolling:touch}
+table{width:100%;border-collapse:collapse;font-size:14px;margin:0 0 6px}
+th,td{padding:8px 10px;border:1px solid var(--line);text-align:left;vertical-align:top;
+  word-break:break-word}
+thead th{background:var(--thead);font-weight:600;white-space:nowrap}
+tbody tr:nth-child(even){background:var(--zebra)}
+table.kv th{background:var(--thead);width:150px;white-space:nowrap}
+td.ok{color:var(--ok);font-weight:600}
+td.no{color:var(--no);font-weight:600}
+td.warn{color:var(--warn);font-weight:600}
+pre{background:var(--code);border:1px solid var(--line);border-radius:8px;
+  padding:12px;overflow-x:auto;font-size:12.5px;line-height:1.5}
+details{margin:10px 0}
+summary{cursor:pointer;color:var(--accent);font-size:14px;padding:4px 0}
+footer{color:var(--muted);font-size:13px;text-align:center;margin-top:28px}
+footer code{background:var(--code);padding:2px 6px;border-radius:4px}
+a{color:var(--accent)}
+@media (max-width:640px){
+  .wrap{padding:20px 16px 48px}
+  header h1{font-size:20px}
+  .score .big{font-size:32px}
+  table{font-size:13px}
+  table.kv th{width:110px}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header><h1>DMIT HKG.AN5.EB.Tiny 服务器测评报告</h1>
+<div class="meta">测试时间：2026-09-19 16:20:31 CST ｜ 出口位置：中国香港 Hong Kong ｜ AS3335 DMIT</div></header>
+<div class="score"><div class="big">87.3<span style="font-size:18px;color:var(--muted)"> / 100</span></div><div class="grade">S 级 · 优秀</div><div class="bars"><div class="bar"><div class="lab"><span>CPU 性能</span><span>18.3 / 25</span></div><div class="track"><div class="fill" style="width:73%"></div></div></div><div class="bar"><div class="lab"><span>磁盘 I/O</span><span>19.1 / 20</span></div><div class="track"><div class="fill" style="width:96%"></div></div></div><div class="bar"><div class="lab"><span>网络带宽</span><span>23.7 / 25</span></div><div class="track"><div class="fill" style="width:95%"></div></div></div><div class="bar"><div class="lab"><span>国内延迟</span><span>15.0 / 15</span></div><div class="track"><div class="fill" style="width:100%"></div></div></div><div class="bar"><div class="lab"><span>流媒体解锁</span><span>7.3 / 10</span></div><div class="track"><div class="fill" style="width:73%"></div></div></div><div class="bar"><div class="lab"><span>IP 质量</span><span>3.9 / 5</span></div><div class="track"><div class="fill" style="width:78%"></div></div></div></div></div>
+<section id="sys"><h2>一、系统与硬件信息</h2>
+<div class="tw"><table class="kv"><tbody><tr><th>CPU 型号</th><td>Intel(R) Xeon(R) Platinum 8375C CPU @ 2.90GHz</td></tr><tr><th>CPU 核心数</th><td>1 核</td></tr><tr><th>CPU 频率</th><td>2899.9 MHz</td></tr><tr><th>CPU 缓存</th><td>L1d: 48 KiB  L2: 1.3 MiB  L3: 54 MiB</td></tr><tr><th>AES-NI</th><td>✔ 已启用</td></tr><tr><th>硬件虚拟化</th><td>✘ 未启用</td></tr><tr><th>内存</th><td>128.44 MB / 984.27 MB</td></tr><tr><th>Swap</th><td>0 B / 512.00 MB</td></tr><tr><th>硬盘空间</th><td>2.13 GB / 19.56 GB（ext4）</td></tr><tr><th>操作系统</th><td>Debian GNU/Linux 12 (bookworm)</td></tr><tr><th>系统架构</th><td>x86_64</td></tr><tr><th>内核版本</th><td>6.1.0-23-amd64</td></tr><tr><th>虚拟化架构</th><td>KVM</td></tr><tr><th>TCP 加速</th><td>bbr + fq</td></tr><tr><th>协议栈</th><td>IPv4 + IPv6</td></tr><tr><th>系统负载</th><td>0.00 0.01 0.05</td></tr><tr><th>运行时间</th><td>3 天 7 小时 12 分</td></tr></tbody></table></div></section>
+<section id="cpu"><h2>二、CPU 性能测试</h2>
+<div class="tw"><table><thead><tr><th>测试项</th><th>结果</th></tr></thead><tbody><tr><td>sysbench 单核</td><td>1462.38 events/s</td></tr><tr><td>7-Zip 综合 (1 线程)</td><td>4211 MIPS</td></tr><tr><td>OpenSSL AES-256-CBC</td><td>1382 MB/s (8KB 块)</td></tr></tbody></table></div>
+</section>
+<section id="mem"><h2>三、内存性能测试</h2>
+<div class="tw"><table><thead><tr><th>测试项</th><th>结果</th></tr></thead><tbody><tr><td>内存读取 (sysbench 1M)</td><td>11.82 GB/s  (12103 MB/s)</td></tr><tr><td>内存写入 (sysbench 1M)</td><td>9.47 GB/s  (9697 MB/s)</td></tr></tbody></table></div>
+</section>
+<section id="disk"><h2>四、磁盘 I/O 测试</h2>
+<h3>顺序读写（dd）</h3><div class="tw"><table><thead><tr><th>块大小 × 数量</th><th>写入速度</th><th>读取速度</th></tr></thead><tbody><tr><td>1M × 1000</td><td>512 MB/s</td><td>1.1 GB/s</td></tr><tr><td>1M × 1000</td><td>498 MB/s</td><td>1.2 GB/s</td></tr><tr><td>128K × 8000</td><td>421 MB/s</td><td>903 MB/s</td></tr></tbody></table></div>
+<h3>随机读写（fio · iodepth=64）</h3><div class="tw"><table><thead><tr><th>块大小</th><th>读取</th><th>写入</th><th>合计</th></tr></thead><tbody><tr><td>4k</td><td>112.44 MB/s (28784 IOPS)</td><td>112.61 MB/s (28828 IOPS)</td><td>225.05 MB/s (57612 IOPS)</td></tr><tr><td>64k</td><td>398.21 MB/s (6371 IOPS)</td><td>400.35 MB/s (6405 IOPS)</td><td>798.56 MB/s (12776 IOPS)</td></tr><tr><td>512k</td><td>612.88 MB/s (1225 IOPS)</td><td>615.02 MB/s (1230 IOPS)</td><td>1227.90 MB/s (2455 IOPS)</td></tr><tr><td>1m</td><td>644.10 MB/s (644 IOPS)</td><td>647.33 MB/s (647 IOPS)</td><td>1291.43 MB/s (1291 IOPS)</td></tr></tbody></table></div>
+</section>
+<section id="ipq"><h2>五、IP 质量体检</h2>
+<div class="tw"><table><thead><tr><th>项目</th><th>内容</th></tr></thead><tbody><tr><td>IP 地址</td><td>154.31.*.*</td></tr><tr><td>ASN</td><td>AS3335 DMIT</td></tr><tr><td>归属组织</td><td>DMIT Cloud Services</td></tr><tr><td>运营商 ISP</td><td>DMIT</td></tr><tr><td>地理位置</td><td>中国香港 Hong Kong</td></tr><tr><td>反向解析 PTR</td><td>无</td></tr><tr><td>时区</td><td>Asia/Hong_Kong</td></tr></tbody></table></div>
+<h3>IP 类型判定</h3><div class="tw"><table><thead><tr><th>检测项</th><th>结果</th></tr></thead><tbody><tr><td>IDC / 机房 IP</td><td>是</td></tr><tr><td>代理 Proxy</td><td>否</td></tr><tr><td>VPN</td><td>否</td></tr><tr><td>Tor 出口节点</td><td>否</td></tr><tr><td>滥用记录 Abuser</td><td>否</td></tr><tr><td>爬虫 Crawler</td><td>否</td></tr><tr><td>ASN 类型</td><td>hosting</td></tr></tbody></table></div>
+<h3>风险与信誉</h3><div class="tw"><table><thead><tr><th>检测项</th><th>结果</th></tr></thead><tbody><tr><td>Scamalytics 欺诈分</td><td>12 / 100（低风险）</td></tr><tr><td>AbuseIPDB 滥用置信度</td><td>0%</td></tr><tr><td>Cloudflare 接入 POP</td><td>HKG（国家判定: HK）</td></tr></tbody></table></div>
+<h3>邮件黑名单（5 个干净 / 1 个命中（共 6 个库））</h3><div class="tw"><table><thead><tr><th>黑名单库</th><th>状态</th></tr></thead><tbody><tr><td>zen.spamhaus.org</td><td class="ok">✅ 干净</td></tr><tr><td>bl.spamcop.net</td><td class="ok">✅ 干净</td></tr><tr><td>b.barracudacentral.org</td><td class="ok">✅ 干净</td></tr><tr><td>dnsbl.sorbs.net</td><td class="ok">✅ 干净</td></tr><tr><td>psbl.surriel.com</td><td class="ok">✅ 干净</td></tr><tr><td>dnsbl-1.uceprotect.net</td><td class="no">❌ 已列入黑名单</td></tr></tbody></table></div>
+<h3>出站端口与连通性</h3><div class="tw"><table><thead><tr><th>检测项</th><th>结果</th></tr></thead><tbody><tr><td>TCP 25（SMTP 明文）</td><td class="no">❌ 封锁</td></tr><tr><td>TCP 465（SMTPS）</td><td class="ok">✅ 放行</td></tr><tr><td>TCP 587（Submission）</td><td class="ok">✅ 放行</td></tr><tr><td>Google (www.google.com:443)</td><td class="ok">✅ 可达</td></tr><tr><td>GitHub (github.com:443)</td><td class="ok">✅ 可达</td></tr></tbody></table></div>
+</section>
+<section id="unlock"><h2>六、流媒体 / AI 服务解锁</h2>
+<h3>IPv4（通过率 16/22）</h3><div class="tw"><table><thead><tr><th>服务</th><th>结果</th></tr></thead><tbody><tr><td>Netflix</td><td class="ok">✅ 解锁（区域: HK）</td></tr><tr><td>Disney+</td><td class="ok">✅ 解锁（区域: HK）</td></tr><tr><td>YouTube Premium</td><td class="ok">✅ 解锁（区域: HK）</td></tr><tr><td>Amazon Prime Video</td><td class="ok">✅ 解锁（区域: HK）</td></tr><tr><td>Max (HBO Max)</td><td class="no">❌ 失败</td></tr><tr><td>Paramount+</td><td class="no">❌ 失败</td></tr><tr><td>DAZN</td><td class="ok">✅ 解锁（区域: HK）</td></tr><tr><td>Spotify 注册</td><td class="ok">✅ 解锁（区域: HK）</td></tr><tr><td>TikTok</td><td class="ok">✅ 解锁（区域: HK）</td></tr><tr><td>Steam 商店</td><td class="ok">✅ 解锁（货币区: HKD）</td></tr><tr><td>ChatGPT</td><td class="ok">✅ 解锁（区域: HK）</td></tr><tr><td>Google Gemini</td><td class="ok">✅ 解锁</td></tr><tr><td>Claude AI</td><td class="ok">✅ 解锁</td></tr><tr><td>巴哈姆特動畫瘋</td><td class="no">❌ 失败</td></tr><tr><td>AbemaTV</td><td class="warn">⚠️ 仅海外内容（HK）</td></tr><tr><td>DMM</td><td class="no">❌ 失败</td></tr><tr><td>Hulu 日本</td><td class="no">❌ 失败</td></tr><tr><td>TVB Anywhere+</td><td class="ok">✅ 解锁</td></tr><tr><td>Bilibili 港澳台</td><td class="ok">✅ 解锁</td></tr><tr><td>Bilibili 台湾限定</td><td class="no">❌ 失败</td></tr><tr><td>维基百科</td><td class="ok">✅ 解锁</td></tr><tr><td>Google 搜索</td><td class="ok">✅ 正常</td></tr></tbody></table></div>
+<p style="color:var(--muted);font-size:13px">YouTube CDN 节点：<b>hkg07s25</b></p><h3>IPv6（通过率 2/3）</h3><div class="tw"><table><thead><tr><th>服务</th><th>结果</th></tr></thead><tbody><tr><td>Netflix</td><td class="ok">✅ 解锁（区域: HK）</td></tr><tr><td>YouTube Premium</td><td class="ok">✅ 解锁（区域: HK）</td></tr><tr><td>ChatGPT</td><td class="no">❌ 失败</td></tr></tbody></table></div>
+</section>
+<section id="ping"><h2>七、延迟与丢包</h2>
+<h3>国内三网（均值 39.8 ms）</h3><div class="tw"><table><thead><tr><th>节点</th><th>线路</th><th>平均延迟</th><th>丢包率</th></tr></thead><tbody><tr><td>北京电信</td><td>电信</td><td>48.2 ms</td><td>0%</td></tr><tr><td>上海电信</td><td>电信</td><td>31.6 ms</td><td>0%</td></tr><tr><td>广州电信</td><td>电信</td><td>12.4 ms</td><td>0%</td></tr><tr><td>北京联通</td><td>联通</td><td>52.8 ms</td><td>0%</td></tr><tr><td>上海联通</td><td>联通</td><td>35.1 ms</td><td>0%</td></tr><tr><td>广州联通</td><td>联通</td><td>14.7 ms</td><td>0%</td></tr><tr><td>北京移动</td><td>移动</td><td>61.3 ms</td><td>0%</td></tr><tr><td>上海移动</td><td>移动</td><td>44.9 ms</td><td>0%</td></tr><tr><td>广州移动</td><td>移动</td><td>18.2 ms</td><td>0%</td></tr><tr><td>北京教育网</td><td>教育网</td><td>78.5 ms</td><td>0%</td></tr></tbody></table></div>
+<h3>全球节点（均值 87.0 ms）</h3><div class="tw"><table><thead><tr><th>节点</th><th>区域</th><th>平均延迟</th><th>丢包率</th></tr></thead><tbody><tr><td>香港 HKIX</td><td>亚太</td><td>1.2 ms</td><td>0%</td></tr><tr><td>日本 东京</td><td>亚太</td><td>48.6 ms</td><td>0%</td></tr><tr><td>新加坡</td><td>亚太</td><td>34.2 ms</td><td>0%</td></tr><tr><td>美国 洛杉矶</td><td>美洲</td><td>152.7 ms</td><td>0%</td></tr><tr><td>德国 法兰克福</td><td>欧洲</td><td>198.4 ms</td><td>0%</td></tr></tbody></table></div>
+</section>
+<section id="speed"><h2>八、网络测速（Speedtest）</h2>
+<h3>就近节点</h3><div class="tw"><table><thead><tr><th>节点</th><th>下载</th><th>上传</th><th>延迟</th><th>抖动</th><th>服务器</th></tr></thead><tbody><tr><td>就近节点</td><td>946.21 Mbps</td><td>912.55 Mbps</td><td>1.84 ms</td><td>0.21 ms</td><td>HKBN Hong Kong</td></tr></tbody></table></div>
+<h3>国内三网节点</h3><div class="tw"><table><thead><tr><th>节点</th><th>下载</th><th>上传</th><th>延迟</th><th>抖动</th><th>服务器</th></tr></thead><tbody><tr><td>上海电信</td><td>412.33 Mbps</td><td>88.21 Mbps</td><td>31.44 ms</td><td>1.82 ms</td><td>China Telecom Shanghai</td></tr><tr><td>上海联通</td><td>508.77 Mbps</td><td>102.65 Mbps</td><td>34.91 ms</td><td>2.10 ms</td><td>China Unicom Shanghai</td></tr><tr><td>上海移动</td><td>266.54 Mbps</td><td>71.38 Mbps</td><td>45.02 ms</td><td>3.44 ms</td><td>China Mobile Shanghai</td></tr><tr><td>广州电信</td><td>633.18 Mbps</td><td>121.44 Mbps</td><td>12.61 ms</td><td>0.95 ms</td><td>China Telecom Guangdong</td></tr></tbody></table></div>
+<h3>国际节点</h3><div class="tw"><table><thead><tr><th>节点</th><th>下载</th><th>上传</th><th>延迟</th><th>抖动</th><th>服务器</th></tr></thead><tbody><tr><td>日本 东京</td><td>878.42 Mbps</td><td>702.11 Mbps</td><td>48.33 ms</td><td>1.12 ms</td><td>IIJ Tokyo</td></tr><tr><td>新加坡 SG</td><td>812.09 Mbps</td><td>655.73 Mbps</td><td>34.18 ms</td><td>0.88 ms</td><td>StarHub Singapore</td></tr><tr><td>美国 洛杉矶</td><td>421.66 Mbps</td><td>310.24 Mbps</td><td>152.91 ms</td><td>4.07 ms</td><td>Zenlayer Los Angeles</td></tr></tbody></table></div>
+</section>
+<section id="route"><h2>九、三网回程路由</h2>
+<div class="tw"><table><thead><tr><th>目标</th><th>IP</th><th>线路判定</th></tr></thead><tbody><tr><td>北京电信</td><td>219.141.140.10</td><td>CN2 GIA (AS4809/59.43)</td></tr><tr><td>上海电信</td><td>202.96.209.133</td><td>CN2 GIA (AS4809/59.43)</td></tr><tr><td>广州电信</td><td>58.60.188.222</td><td>CN2 GIA (AS4809/59.43)</td></tr><tr><td>北京联通</td><td>202.106.195.68</td><td>联通 A网 CUII (AS9929)</td></tr><tr><td>上海联通</td><td>210.22.97.1</td><td>联通 A网 CUII (AS9929)</td></tr><tr><td>北京移动</td><td>221.183.129.101</td><td>移动 CMIN2 (AS58807)</td></tr></tbody></table></div>
+<details><summary>展开完整路由追踪原始输出</summary><h3>回程路由 · 上海电信 (202.96.209.133)</h3><pre>traceroute to 202.96.209.133, 30 hops max
+ 1  10.0.0.1                        0.42 ms  AS*     局域网
+ 2  154.31.112.1                    0.88 ms  AS3335  中国 香港 DMIT
+ 3  59.43.187.29                    2.14 ms  AS4809  中国 香港 电信 CN2
+ 4  59.43.130.77                   28.66 ms  AS4809  中国 上海 电信 CN2
+ 5  202.97.94.153                  31.02 ms  AS4134  中国 上海 电信
+ 6  202.96.209.133                 31.44 ms  AS4134  中国 上海 电信</pre></details></section>
+<footer><p>测试环境：Debian GNU/Linux 12 (bookworm) / 6.1.0-23-amd64 / KVM ｜ 总耗时：14 分 08 秒</p><p>本报告由 <a href="https://github.com/doudoudoubao/VPSceshi">VPSceshi v1.0.0</a> 一键脚本自动生成</p><p><code>bash &lt;(curl -sL https://github.com/doudoudoubao/VPSceshi/raw/main/dist/vpstest.sh)</code></p></footer>
+</div>
+</body>
+</html>
