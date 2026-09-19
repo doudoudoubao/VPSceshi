@@ -8,7 +8,7 @@
 # 一键运行：
 #   bash <(curl -sL https://github.com/doudoudoubao/VPSceshi/raw/main/dist/vpstest.sh)
 #
-# 生成时间： 2026-09-19 16:24:41 UTC
+# 生成时间： 2026-09-19 16:28:39 UTC
 # ============================================================
 
 set -o pipefail
@@ -1769,13 +1769,17 @@ UA_UNLOCK="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 
 
 # 当前检测使用的协议栈：4 或 6
 UL_STACK=4
+# 首轮用短超时抢速度，对「待确认」的再用长超时重试一次。
+# 只重试没结论的，代价可控，又不会因为慢站点误判成待确认。
+UL_CONNECT=4
+UL_MAXTIME=7
 ucurl() {
-  curl -sS -"$UL_STACK" --connect-timeout 4 --max-time 7 \
+  curl -sS -"$UL_STACK" --connect-timeout "$UL_CONNECT" --max-time "$UL_MAXTIME" \
     -A "$UA_UNLOCK" "$@" 2>/dev/null
 }
 ucode() { # 只取 HTTP 状态码
   curl -sS -"$UL_STACK" -o /dev/null -w '%{http_code}' \
-    --connect-timeout 4 --max-time 7 -A "$UA_UNLOCK" "$@" 2>/dev/null
+    --connect-timeout "$UL_CONNECT" --max-time "$UL_MAXTIME" -A "$UA_UNLOCK" "$@" 2>/dev/null
 }
 
 OK="✅ 解锁"
@@ -2246,17 +2250,53 @@ _run_unlock_suite() {
     "维基百科访问|u_wikipedia"
     "维基百科可编辑性|u_wikipedia_edit"
   )
-  local total=0 pass=0 fail=0 err=0 misc=0
-  local it name fn r
+  # 先跑一轮（短超时），结果存起来先不落表
+  local -a names=() fns=() results=()
+  local it name fn r i
   for it in "${items[@]}"; do
     name="${it%%|*}"; fn="${it##*|}"
     inline "$name"
     r="$($fn 2>/dev/null)"
     [ -z "$r" ] && r="$NA"
     inline_done "$r"
+    names+=("$name"); fns+=("$fn"); results+=("$r")
+  done
+
+  # 第二轮：只重试「待确认」的，用长一倍的超时。
+  # 慢站点在首轮被超时误判成待确认，这轮能把它们捞回来。
+  local retry_n=0
+  for i in "${!results[@]}"; do
+    case "${results[$i]}" in ⚠️*) retry_n=$((retry_n + 1)) ;; esac
+  done
+  if [ "$retry_n" -gt 0 ]; then
+    log_info "${retry_n} 项待确认，用更长超时重试一次（最多 90 秒）..."
+    local old_c="$UL_CONNECT" old_t="$UL_MAXTIME"
+    UL_CONNECT=8; UL_MAXTIME=18
+    # 整轮重试给 90 秒预算：网络整体不通时 37 项全超时会拖十几分钟
+    local rt_deadline=$(( $(date +%s) + 90 )) rt_done=0
+    for i in "${!results[@]}"; do
+      case "${results[$i]}" in ⚠️*) ;; *) continue ;; esac
+      if [ "$(date +%s)" -ge "$rt_deadline" ]; then
+        log_warn "重试已用满 90 秒，剩余 $((retry_n - rt_done)) 项保持待确认"
+        break
+      fi
+      inline "重试 ${names[$i]}"
+      r="$(${fns[$i]} 2>/dev/null)"
+      [ -z "$r" ] && r="$NA"
+      inline_done "$r"
+      results[$i]="$r"
+      rt_done=$((rt_done + 1))
+    done
+    UL_CONNECT="$old_c"; UL_MAXTIME="$old_t"
+  fi
+
+  # 落表与归类
+  local total=0 pass=0 fail=0 err=0 misc=0
+  for i in "${!results[@]}"; do
+    name="${names[$i]}"; r="${results[$i]}"
     res_add "$table" "$name" "$r"
     total=$((total + 1))
-    # 按结果归类：可用 / 不可用 / 失败（待确认）/ 难归类（返回的是地区码等信息）
+    # 按结果归类：可用 / 不可用 / 待确认 / 难归类（返回的是地区码等信息）
     case "$r" in
       ✅*)  pass=$((pass + 1)); res_add "${table}_ok"   "$name" "$r" ;;
       ❌*)  fail=$((fail + 1)); res_add "${table}_no"   "$name" "$r" ;;
