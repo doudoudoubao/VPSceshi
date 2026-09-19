@@ -124,7 +124,7 @@ _run_node_list() {
     [ -z "$label" ] && continue
     [ "$limit" -gt 0 ] && [ "$n" -ge "$limit" ] && break
     n=$((n + 1))
-    inline "$label ..."
+    inline "$label"
     sid="$(st_find_server "$kw")"
     [ -z "$sid" ] && sid="$fbid"
     res="$(st_run "$sid")"
@@ -168,7 +168,7 @@ test_speedtest() {
   fi
 
   # 先跑一次自动就近节点
-  inline "自动就近节点 ..."
+  inline "就近节点"
   local auto; auto="$(st_run "")"
   if [ -n "$auto" ]; then
     local dl ul pg jt nm lc

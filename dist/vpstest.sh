@@ -8,7 +8,7 @@
 # 一键运行：
 #   bash <(curl -sL https://github.com/doudoudoubao/VPSceshi/raw/main/dist/vpstest.sh)
 #
-# 生成时间： 2026-09-19 16:02:46 UTC
+# 生成时间： 2026-09-19 16:15:18 UTC
 # ============================================================
 
 set -o pipefail
@@ -69,13 +69,17 @@ step() {
   STEP_NO=$((STEP_NO + 1))
   [ "$QUIET" = "1" ] && return 0
   # 带上累计耗时，卡住时一眼看出卡了多久
-  local el=""
+  local el="" elw=0
   if [ "$RUN_T0" -gt 0 ]; then
     local s=$(( $(date +%s) - RUN_T0 ))
-    el="$(printf ' %s[+%d:%02d]%s' "$C_DIM" $((s/60)) $((s%60)) "$C_RST")"
+    el="$(printf '[+%d:%02d]' $((s/60)) $((s%60)))"
+    elw=${#el}
   fi
-  printf '\n%s%s━━━ [%02d] %s%s %s━━━━━━━━━━%s\n' \
-    "$C_B" "$C_BL" "$STEP_NO" "$*" "$el" "$C_BL" "$C_RST"
+  # 不用 ━ 铺满行：这类制表符属于「东亚模糊宽度」，
+  # 中文环境的终端可能按 2 列渲染，铺满就必然折行。
+  # 短前缀 + 不留尾巴，任何宽度都不会乱。
+  printf '\n%s%s▌[%02d] %s%s %s%s%s\n' \
+    "$C_B" "$C_BL" "$STEP_NO" "$*" "$C_RST" "$C_DIM" "$el" "$C_RST"
 }
 
 # ---------- 结果存储 ----------
@@ -266,8 +270,77 @@ mark_no()   { printf '否'; }
 timer_start() { _T0=$(date +%s); }
 timer_end()   { echo $(( $(date +%s) - ${_T0:-0} )); }
 
+# ---------- 终端宽度自适应排版 ----------
+#
+# printf 的 %-32s 按字节补位，而中文一个字占 3 字节却只显示 2 列，
+# 补出来的宽度全是错的；再碰上手机 SSH 那种 40 列的窄终端，
+# 每行都在乱折。所以这里按「显示宽度」自己算补位。
+
+TERM_W=80      # 终端列数
+LABEL_W=28     # 进度行标签列宽
+
+_detect_term() {
+  local w=""
+  [ -n "$COLUMNS" ] && w="$COLUMNS"
+  [ -z "$w" ] && have tput && w="$(tput cols 2>/dev/null)"
+  [ -z "$w" ] && have stty && w="$(stty size 2>/dev/null | awk '{print $2}')"
+  case "$w" in ''|*[!0-9]*) w=80 ;; esac
+  [ "$w" -lt 32 ] && w=32
+  [ "$w" -gt 140 ] && w=140
+  TERM_W="$w"
+  # 标签列宽随终端走：窄屏就别留那么宽的空档
+  if   [ "$TERM_W" -ge 78 ]; then LABEL_W=30
+  elif [ "$TERM_W" -ge 60 ]; then LABEL_W=24
+  elif [ "$TERM_W" -ge 46 ]; then LABEL_W=18
+  else                            LABEL_W=14
+  fi
+}
+_detect_term
+
+# 字符串的终端显示宽度：CJK / emoji 算 2 列，ASCII 算 1 列
+_dw() {
+  # 纯 ASCII 走快路径，省掉一次 awk
+  case "$1" in
+    *[^\ -~]*) ;;
+    *) printf '%s' "${#1}"; return ;;
+  esac
+  LC_ALL=C awk -v s="$1" 'BEGIN{
+    w=0
+    for (i=1; i<=length(s); i++) {
+      c = substr(s,i,1)
+      if      (c <  "\200") w++      # ASCII
+      else if (c <  "\300") ;        # UTF-8 连续字节，不计宽
+      else if (c <  "\340") w++      # 2 字节序列 = 1 列
+      else                  w += 2   # 3/4 字节（CJK / emoji）= 2 列
+    }
+    print w }'
+}
+
+# 把字符串按显示宽度补到 n 列；超长就截断加省略号
+_pad() {
+  local s="$1" n="$2" w
+  w="$(_dw "$s")"
+  if [ "$w" -gt "$n" ]; then
+    # 超宽时按字符逐个截，直到显示宽度放得下
+    local out="" c cw=0
+    local i len=${#s}
+    for (( i=0; i<len; i++ )); do
+      c="${s:i:1}"
+      local d; d="$(_dw "$c")"
+      [ $((cw + d)) -gt $((n - 1)) ] && break
+      out="$out$c"; cw=$((cw + d))
+    done
+    printf '%s…%*s' "$out" $(( n - cw - 1 )) ''
+    return
+  fi
+  printf '%s%*s' "$s" $(( n - w )) ''
+}
+
 # 进度条式的行内提示
-inline() { [ "$QUIET" = "1" ] && return 0; printf '    %s%-32s%s' "$C_DIM" "$1" "$C_RST"; }
+inline() {
+  [ "$QUIET" = "1" ] && return 0
+  printf '  %s%s%s ' "$C_DIM" "$(_pad "$1" "$LABEL_W")" "$C_RST"
+}
 inline_done() { [ "$QUIET" = "1" ] && return 0; printf '%s\n' "$1"; }
 
 # ===== 05_profile.sh =====
@@ -422,7 +495,7 @@ collect_profile() {
   if [ -n "$P_VENDOR$P_PLAN$P_DC" ]; then
     log_ok "${P_VENDOR} ${P_PLAN} @ ${P_DC}"
   else
-    log_info "未提供商家/套餐信息，可用 --vendor/--plan/--dc 或 --config 补充"
+    log_info "未提供商家/套餐信息（可用 --config 补充）"
   fi
   log_ok "本机公网 IP：IPv4 ${v4c} 个 / IPv6 ${v6c} 个"
 }
@@ -610,7 +683,8 @@ install_deps() {
   done
   DEPS_REPORT="可用: ${ok[*]}"
   [ ${#miss[@]} -gt 0 ] && DEPS_REPORT="$DEPS_REPORT / 缺失: ${miss[*]}"
-  log_ok "$DEPS_REPORT"
+  log_ok "可用: ${ok[*]}"
+  [ ${#miss[@]} -gt 0 ] && log_warn "缺失: ${miss[*]}（相关测试会降级）"
   kv_set "meta.deps" "$DEPS_REPORT"
 }
 
@@ -812,8 +886,10 @@ collect_sysinfo() {
   kv_set meta.version    "$VPSTEST_VERSION"
 
   log_ok "CPU: $(kv_get sys.cpu.model) × $(kv_get sys.cpu.cores)"
-  log_ok "内存: $(kv_get sys.mem.summary)   硬盘: $(kv_get sys.disk.summary)"
-  log_ok "系统: $(kv_get sys.os) / $(kv_get sys.kernel) / $(kv_get sys.virt)"
+  log_ok "内存: $(kv_get sys.mem.summary)"
+  log_ok "硬盘: $(kv_get sys.disk.summary)"
+  log_ok "系统: $(kv_get sys.os)"
+  log_ok "内核: $(kv_get sys.kernel) / $(kv_get sys.virt)"
   log_ok "TCP: $(kv_get sys.tcp.cc) + $(kv_get sys.tcp.qdisc)"
 }
 
@@ -842,7 +918,7 @@ test_cpu() {
 
   need_tool sysbench >/dev/null 2>&1 || true
   if have sysbench; then
-    inline "sysbench 单核 (${secs}s) ..."
+    inline "sysbench 单核 ${secs}s"
     local s1; s1="$(_sysbench_cpu 1 "$secs")"
     inline_done "${s1:-失败}"
     if [ -n "$s1" ]; then
@@ -851,7 +927,7 @@ test_cpu() {
     fi
 
     if [ "$cores" -gt 1 ]; then
-      inline "sysbench 多核 ×${cores} (${secs}s) ..."
+      inline "sysbench 多核 ×${cores}"
       local sm; sm="$(_sysbench_cpu "$cores" "$secs")"
       inline_done "${sm:-失败}"
       if [ -n "$sm" ]; then
@@ -870,7 +946,7 @@ test_cpu() {
   # 7z 压缩基准（可选，很多系统自带 p7zip）
   if have 7z || have 7za || have 7zr; then
     local bin; bin="$(command -v 7z || command -v 7za || command -v 7zr)"
-    inline "7-Zip 压缩基准 ..."
+    inline "7-Zip 压缩基准"
     local o mips
     o="$(run_to 120 "$bin" b -mmt="$cores" 2>/dev/null | tail -20)"
     mips="$(printf '%s' "$o" | grep -m1 -E '^Tot:' | awk '{print $NF}')"
@@ -883,7 +959,7 @@ test_cpu() {
 
   # OpenSSL AES 吞吐（衡量 AES-NI 实效）
   if have openssl; then
-    inline "OpenSSL AES-256 吞吐 ..."
+    inline "OpenSSL AES-256"
     local o v
     o="$(run_to 90 openssl speed -elapsed -evp aes-256-cbc 2>/dev/null | tail -3)"
     # openssl 1.x 输出 aes-256-cbc，3.x 输出 AES-256-CBC，统一忽略大小写
@@ -908,7 +984,7 @@ test_cpu() {
 # 无 sysbench 时的纯 shell/awk 回退基准
 _fallback_cpu() {
   local cores="$1"
-  inline "内置整数运算基准 ..."
+  inline "内置整数基准"
   local t0 t1 score
   t0="$(date +%s%N 2>/dev/null || echo 0)"
   awk 'BEGIN{n=0; for(i=2;i<60000;i++){p=1; for(j=2;j*j<=i;j++){if(i%j==0){p=0;break}} n+=p} print n}' >/dev/null 2>&1
@@ -989,10 +1065,10 @@ test_memory() {
 
   need_tool sysbench >/dev/null 2>&1 || true
   if have sysbench; then
-    inline "sysbench 内存顺序读 ..."
+    inline "内存顺序读"
     local r; r="$(_sysbench_mem read)"
     inline_done "${r:-失败}"
-    inline "sysbench 内存顺序写 ..."
+    inline "内存顺序写"
     local w; w="$(_sysbench_mem write)"
     inline_done "${w:-失败}"
 
@@ -1013,7 +1089,7 @@ test_memory() {
       [ -d "$d" ] && [ -w "$d" ] && { tdir="$d"; break; }
     done
     if [ -n "$tdir" ]; then
-      inline "dd 内存写入 (tmpfs) ..."
+      inline "dd 内存写入"
       local o v
       o="$(run_to 60 dd if=/dev/zero of="$tdir/.vpstest_mem" bs=1M count=512 conv=fsync 2>&1)"
       v="$(printf '%s' "$o" | tail -1 | grep -Eo '[0-9.]+ [KMG]B/s' | tail -1)"
@@ -1149,10 +1225,10 @@ test_disk() {
   for s in $specs; do
     i=$((i + 1))
     local bs="${s%%:*}" cnt="${s##*:}"
-    inline "dd 写入 ${bs}×${cnt} (第${i}次) ..."
+    inline "dd 写入 ${bs}×${cnt}"
     local w; w="$(_dd_write "$bs" "$cnt")"
     inline_done "${w:-失败}"
-    inline "dd 读取 ${bs}×${cnt} (第${i}次) ..."
+    inline "dd 读取 ${bs}×${cnt}"
     local r; r="$(_dd_read "$bs" "$cnt")"
     inline_done "${r:-失败}"
     row_add disk_dd "${bs} × ${cnt}" "${w:-N/A}" "${r:-N/A}"
@@ -1174,7 +1250,7 @@ test_disk() {
     if [ "$FAST_MODE" = "1" ]; then size="256M"; secs=8; else size="512M"; secs=10; fi
     local bsl="4k 64k 512k 1m"
     for bs in $bsl; do
-      inline "fio 混合随机读写 ${bs} ..."
+      inline "fio 随机读写 ${bs}"
       local res; res="$(_fio_one "$bs" randrw "$size" "$secs")"
       if [ -n "$res" ]; then
         local ri rb wi wb
@@ -1227,7 +1303,7 @@ detect_ip() {
     "https://api-ipv6.ip.sb/ip"
   )
 
-  inline "检测 IPv4 出口 ..."
+  inline "检测 IPv4 出口"
   local u
   for u in "${u4[@]}"; do
     IP4="$(trim "$(xcurl4 "$u")")"
@@ -1236,7 +1312,7 @@ detect_ip() {
   inline_done "${IP4:-无}"
   [ -n "$IP4" ] && IPV4_OK=1
 
-  inline "检测 IPv6 出口 ..."
+  inline "检测 IPv6 出口"
   for u in "${u6[@]}"; do
     IP6="$(trim "$(xcurl6 "$u")")"
     case "$IP6" in *:*) break ;; *) IP6="" ;; esac
@@ -1343,7 +1419,7 @@ test_ipquality() {
   row_add ipq_base "时区" "$(kv_or net.tz '未知')"
 
   # ---------- 2. IP 类型判定 ----------
-  inline "IP 类型判定 ..."
+  inline "IP 类型判定"
   local usetype="未知" company="" abuser=""
   local j; j="$(xcurl4 "https://api.ipapi.is/?q=${IP4}")"
   if [ -n "$j" ]; then
@@ -1377,7 +1453,7 @@ test_ipquality() {
   kv_set ipq.usetype "$usetype"
 
   # ---------- 3. 欺诈分 / 风险分 ----------
-  inline "Scamalytics 欺诈分 ..."
+  inline "Scamalytics 欺诈分"
   local html score risk
   html="$(xcurl4 "https://scamalytics.com/ip/${IP4}")"
   if [ -n "$html" ]; then
@@ -1397,7 +1473,7 @@ test_ipquality() {
   [ -n "$risk" ] && row_add ipq_risk "Scamalytics 风险等级" "$risk"
 
   # AbuseIPDB 公开页面（无 key 时抓取概要）
-  inline "AbuseIPDB 举报记录 ..."
+  inline "AbuseIPDB 举报"
   local ab conf
   ab="$(xcurl4 -H 'Accept: text/html' "https://www.abuseipdb.com/check/${IP4}")"
   if [ -n "$ab" ]; then
@@ -1418,7 +1494,7 @@ test_ipquality() {
   # ---------- 4. 原生 / 广播判定 ----------
   # 判据：IP 段的注册国（RDAP）与实际地理定位国是否一致。
   # 一致 = 原生 IP；不一致 = 该段在别处注册、广播到当前位置使用。
-  inline "原生 / 广播判定 ..."
+  inline "原生 / 广播判定"
   local reg_cc geo_cc verdict reason
   reg_cc="$(kv_get nq.rdap_cc)"
   geo_cc="$(kv_get net.cc)"
@@ -1446,7 +1522,7 @@ test_ipquality() {
   # ---------- 5. 邮件黑名单 ----------
   need_tool dig >/dev/null 2>&1 || true
   # 分两档：主流黑名单命中影响大（黑名单），次级库命中记为「已标记」
-  inline "DNSBL 黑名单检测 ..."
+  inline "DNSBL 黑名单"
   local rbls_major=(
     "zen.spamhaus.org"
     "bl.spamcop.net"
@@ -1492,7 +1568,7 @@ test_ipquality() {
   fi
 
   # ---------- 6. 端口与邮局 ----------
-  inline "出站端口检测 ..."
+  inline "出站端口检测"
   local p25 p465 p587
   _port_open "smtp.gmail.com" 25  6 && p25="✅ 放行"  || p25="❌ 封锁"
   _port_open "smtp.gmail.com" 465 6 && p465="✅ 放行" || p465="❌ 封锁"
@@ -1558,7 +1634,7 @@ test_netquality() {
   fi
 
   # ---------- 1. 前缀与 Origin AS ----------
-  inline "查询 BGP 前缀与 Origin AS ..."
+  inline "BGP 前缀 / Origin AS"
   local j prefix asns
   j="$(_ripestat network-info "$IP4")"
   prefix="$(jget "$j" '.data.prefix')"
@@ -1573,7 +1649,7 @@ test_netquality() {
 
   # ---------- 2. ASN 概览 ----------
   if [ -n "$ASN_NUM" ]; then
-    inline "查询 ASN 概览 ..."
+    inline "ASN 概览"
     local jo holder
     jo="$(_ripestat as-overview "AS${ASN_NUM}")"
     holder="$(jget "$jo" '.data.holder')"
@@ -1590,7 +1666,7 @@ test_netquality() {
   fi
 
   # ---------- 3. RDAP 注册信息（注册主体 / 注册地 / 日期）----------
-  inline "查询 RDAP 注册信息 ..."
+  inline "RDAP 注册信息"
   local jd name country reg_date upd_date rir
   jd="$(xcurl4 -H 'Accept: application/rdap+json' "https://rdap.org/ip/${IP4}")"
   if [ -n "$jd" ]; then
@@ -1619,7 +1695,7 @@ test_netquality() {
 
   # ---------- 4. 上游 / 对等互联（RIPEstat 邻居）----------
   if [ -n "$ASN_NUM" ]; then
-    inline "查询上游与对等互联 ..."
+    inline "上游 / 对等互联"
     local jn up down peer
     jn="$(_ripestat asn-neighbours "AS${ASN_NUM}")"
     if have jq; then
@@ -1633,7 +1709,7 @@ test_netquality() {
     [ -n "$peer" ] && row_add nq_peer "不确定方向邻居" "$peer 个"
 
     # ---------- 5. PeeringDB：IXP 与对等 ----------
-    inline "查询 PeeringDB IXP ..."
+    inline "PeeringDB IXP"
     local jp netid ixcount
     jp="$(xcurl4 "https://www.peeringdb.com/api/net?asn=${ASN_NUM}")"
     netid="$(jget "$jp" '.data[0].id')"
@@ -2174,7 +2250,7 @@ _run_unlock_suite() {
   local it name fn r
   for it in "${items[@]}"; do
     name="${it%%|*}"; fn="${it##*|}"
-    inline "$name ..."
+    inline "$name"
     r="$($fn 2>/dev/null)"
     [ -z "$r" ] && r="$NA"
     inline_done "$r"
@@ -2356,7 +2432,7 @@ _run_node_list() {
     [ -z "$label" ] && continue
     [ "$limit" -gt 0 ] && [ "$n" -ge "$limit" ] && break
     n=$((n + 1))
-    inline "$label ..."
+    inline "$label"
     sid="$(st_find_server "$kw")"
     [ -z "$sid" ] && sid="$fbid"
     res="$(st_run "$sid")"
@@ -2400,7 +2476,7 @@ test_speedtest() {
   fi
 
   # 先跑一次自动就近节点
-  inline "自动就近节点 ..."
+  inline "就近节点"
   local auto; auto="$(st_run "")"
   if [ -n "$auto" ]; then
     local dl ul pg jt nm lc
@@ -2490,7 +2566,7 @@ _run_ping_list() {
   PING_AVG=""
   while IFS='|' read -r label ip grp; do
     [ -z "$label" ] && continue
-    inline "$label ($ip) ..."
+    inline "$label"
     res="$(_ping_one "$ip" 4)"
     if [ -n "$res" ]; then
       IFS='|' read -r avg loss <<< "$res"
@@ -2644,7 +2720,7 @@ test_route() {
     [ "$FAST_MODE" = "1" ] && rlimit=3
     [ "$ROUTE_FULL" = "1" ] && rlimit=99
     [ "$n" -gt "$rlimit" ] && break
-    inline "$label ($ip) ..."
+    inline "$label"
     out="$(_trace_one "$ip")"
     if [ -n "$out" ]; then
       line="$(_guess_line "$out")"
@@ -2911,7 +2987,7 @@ test_mtr() {
     [ -z "$label" ] && continue
     n=$((n + 1))
     [ "$FAST_MODE" = "1" ] && [ "$n" -gt 1 ] && break
-    inline "$label ($ip) ..."
+    inline "$label"
     out="$(run_to 60 mtr --report --report-cycles=5 -n "$ip" 2>/dev/null)"
     if [ -z "$out" ]; then
       inline_done "失败"
@@ -3124,12 +3200,12 @@ test_iperf() {
       [ -n "$lat" ] && lat="$(calc "$lat" 1) ms"
     fi
 
-    inline "$label 上传 ..."
+    inline "$label ↑"
     port="$(_pick_port "$range")"
     up="$(_iperf_run "$host" "$port" up)"
     inline_done "${up:+${up} Mbps}${up:-失败}"
 
-    inline "$label 下载 ..."
+    inline "$label ↓"
     port="$(_pick_port "$range")"
     down="$(_iperf_run "$host" "$port" down)"
     inline_done "${down:+${down} Mbps}${down:-失败}"
@@ -5064,6 +5140,13 @@ parse_args() {
 
 banner() {
   [ "$QUIET" = "1" ] && return 0
+  # 那幅字符画有 47 列宽，手机终端放不下，窄屏换单行标题
+  if [ "$TERM_W" -lt 52 ]; then
+    printf '\n%s%sVPS TEST%s %sv%s%s\n' \
+      "$C_B" "$C_C" "$C_RST" "$C_DIM" "$VPSTEST_VERSION" "$C_RST"
+    printf '%s一键全能服务器测评%s\n\n' "$C_DIM" "$C_RST"
+    return 0
+  fi
   cat <<EOF
 ${C_B}${C_C}
  ╦  ╦╔═╗╔═╗  ╔╦╗╔═╗╔═╗╔╦╗

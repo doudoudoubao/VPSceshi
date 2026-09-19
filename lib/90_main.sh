@@ -127,6 +127,13 @@ parse_args() {
 
 banner() {
   [ "$QUIET" = "1" ] && return 0
+  # 那幅字符画有 47 列宽，手机终端放不下，窄屏换单行标题
+  if [ "$TERM_W" -lt 52 ]; then
+    printf '\n%s%sVPS TEST%s %sv%s%s\n' \
+      "$C_B" "$C_C" "$C_RST" "$C_DIM" "$VPSTEST_VERSION" "$C_RST"
+    printf '%s一键全能服务器测评%s\n\n' "$C_DIM" "$C_RST"
+    return 0
+  fi
   cat <<EOF
 ${C_B}${C_C}
  ╦  ╦╔═╗╔═╗  ╔╦╗╔═╗╔═╗╔╦╗

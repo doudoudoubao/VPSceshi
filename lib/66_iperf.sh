@@ -84,12 +84,12 @@ test_iperf() {
       [ -n "$lat" ] && lat="$(calc "$lat" 1) ms"
     fi
 
-    inline "$label 上传 ..."
+    inline "$label ↑"
     port="$(_pick_port "$range")"
     up="$(_iperf_run "$host" "$port" up)"
     inline_done "${up:+${up} Mbps}${up:-失败}"
 
-    inline "$label 下载 ..."
+    inline "$label ↓"
     port="$(_pick_port "$range")"
     down="$(_iperf_run "$host" "$port" down)"
     inline_done "${down:+${down} Mbps}${down:-失败}"

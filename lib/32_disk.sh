@@ -121,10 +121,10 @@ test_disk() {
   for s in $specs; do
     i=$((i + 1))
     local bs="${s%%:*}" cnt="${s##*:}"
-    inline "dd 写入 ${bs}×${cnt} (第${i}次) ..."
+    inline "dd 写入 ${bs}×${cnt}"
     local w; w="$(_dd_write "$bs" "$cnt")"
     inline_done "${w:-失败}"
-    inline "dd 读取 ${bs}×${cnt} (第${i}次) ..."
+    inline "dd 读取 ${bs}×${cnt}"
     local r; r="$(_dd_read "$bs" "$cnt")"
     inline_done "${r:-失败}"
     row_add disk_dd "${bs} × ${cnt}" "${w:-N/A}" "${r:-N/A}"
@@ -146,7 +146,7 @@ test_disk() {
     if [ "$FAST_MODE" = "1" ]; then size="256M"; secs=8; else size="512M"; secs=10; fi
     local bsl="4k 64k 512k 1m"
     for bs in $bsl; do
-      inline "fio 混合随机读写 ${bs} ..."
+      inline "fio 随机读写 ${bs}"
       local res; res="$(_fio_one "$bs" randrw "$size" "$secs")"
       if [ -n "$res" ]; then
         local ri rb wi wb

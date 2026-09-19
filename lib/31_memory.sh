@@ -19,10 +19,10 @@ test_memory() {
 
   need_tool sysbench >/dev/null 2>&1 || true
   if have sysbench; then
-    inline "sysbench 内存顺序读 ..."
+    inline "内存顺序读"
     local r; r="$(_sysbench_mem read)"
     inline_done "${r:-失败}"
-    inline "sysbench 内存顺序写 ..."
+    inline "内存顺序写"
     local w; w="$(_sysbench_mem write)"
     inline_done "${w:-失败}"
 
@@ -43,7 +43,7 @@ test_memory() {
       [ -d "$d" ] && [ -w "$d" ] && { tdir="$d"; break; }
     done
     if [ -n "$tdir" ]; then
-      inline "dd 内存写入 (tmpfs) ..."
+      inline "dd 内存写入"
       local o v
       o="$(run_to 60 dd if=/dev/zero of="$tdir/.vpstest_mem" bs=1M count=512 conv=fsync 2>&1)"
       v="$(printf '%s' "$o" | tail -1 | grep -Eo '[0-9.]+ [KMG]B/s' | tail -1)"

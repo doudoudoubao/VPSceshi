@@ -53,7 +53,7 @@ test_mtr() {
     [ -z "$label" ] && continue
     n=$((n + 1))
     [ "$FAST_MODE" = "1" ] && [ "$n" -gt 1 ] && break
-    inline "$label ($ip) ..."
+    inline "$label"
     out="$(run_to 60 mtr --report --report-cycles=5 -n "$ip" 2>/dev/null)"
     if [ -z "$out" ]; then
       inline_done "失败"

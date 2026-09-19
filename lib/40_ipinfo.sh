@@ -31,7 +31,7 @@ detect_ip() {
     "https://api-ipv6.ip.sb/ip"
   )
 
-  inline "检测 IPv4 出口 ..."
+  inline "检测 IPv4 出口"
   local u
   for u in "${u4[@]}"; do
     IP4="$(trim "$(xcurl4 "$u")")"
@@ -40,7 +40,7 @@ detect_ip() {
   inline_done "${IP4:-无}"
   [ -n "$IP4" ] && IPV4_OK=1
 
-  inline "检测 IPv6 出口 ..."
+  inline "检测 IPv6 出口"
   for u in "${u6[@]}"; do
     IP6="$(trim "$(xcurl6 "$u")")"
     case "$IP6" in *:*) break ;; *) IP6="" ;; esac

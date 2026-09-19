@@ -52,7 +52,7 @@ _run_ping_list() {
   PING_AVG=""
   while IFS='|' read -r label ip grp; do
     [ -z "$label" ] && continue
-    inline "$label ($ip) ..."
+    inline "$label"
     res="$(_ping_one "$ip" 4)"
     if [ -n "$res" ]; then
       IFS='|' read -r avg loss <<< "$res"

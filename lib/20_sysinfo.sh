@@ -165,7 +165,9 @@ collect_sysinfo() {
   kv_set meta.version    "$VPSTEST_VERSION"
 
   log_ok "CPU: $(kv_get sys.cpu.model) × $(kv_get sys.cpu.cores)"
-  log_ok "内存: $(kv_get sys.mem.summary)   硬盘: $(kv_get sys.disk.summary)"
-  log_ok "系统: $(kv_get sys.os) / $(kv_get sys.kernel) / $(kv_get sys.virt)"
+  log_ok "内存: $(kv_get sys.mem.summary)"
+  log_ok "硬盘: $(kv_get sys.disk.summary)"
+  log_ok "系统: $(kv_get sys.os)"
+  log_ok "内核: $(kv_get sys.kernel) / $(kv_get sys.virt)"
   log_ok "TCP: $(kv_get sys.tcp.cc) + $(kv_get sys.tcp.qdisc)"
 }

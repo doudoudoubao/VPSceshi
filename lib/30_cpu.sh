@@ -23,7 +23,7 @@ test_cpu() {
 
   need_tool sysbench >/dev/null 2>&1 || true
   if have sysbench; then
-    inline "sysbench 单核 (${secs}s) ..."
+    inline "sysbench 单核 ${secs}s"
     local s1; s1="$(_sysbench_cpu 1 "$secs")"
     inline_done "${s1:-失败}"
     if [ -n "$s1" ]; then
@@ -32,7 +32,7 @@ test_cpu() {
     fi
 
     if [ "$cores" -gt 1 ]; then
-      inline "sysbench 多核 ×${cores} (${secs}s) ..."
+      inline "sysbench 多核 ×${cores}"
       local sm; sm="$(_sysbench_cpu "$cores" "$secs")"
       inline_done "${sm:-失败}"
       if [ -n "$sm" ]; then
@@ -51,7 +51,7 @@ test_cpu() {
   # 7z 压缩基准（可选，很多系统自带 p7zip）
   if have 7z || have 7za || have 7zr; then
     local bin; bin="$(command -v 7z || command -v 7za || command -v 7zr)"
-    inline "7-Zip 压缩基准 ..."
+    inline "7-Zip 压缩基准"
     local o mips
     o="$(run_to 120 "$bin" b -mmt="$cores" 2>/dev/null | tail -20)"
     mips="$(printf '%s' "$o" | grep -m1 -E '^Tot:' | awk '{print $NF}')"
@@ -64,7 +64,7 @@ test_cpu() {
 
   # OpenSSL AES 吞吐（衡量 AES-NI 实效）
   if have openssl; then
-    inline "OpenSSL AES-256 吞吐 ..."
+    inline "OpenSSL AES-256"
     local o v
     o="$(run_to 90 openssl speed -elapsed -evp aes-256-cbc 2>/dev/null | tail -3)"
     # openssl 1.x 输出 aes-256-cbc，3.x 输出 AES-256-CBC，统一忽略大小写
@@ -89,7 +89,7 @@ test_cpu() {
 # 无 sysbench 时的纯 shell/awk 回退基准
 _fallback_cpu() {
   local cores="$1"
-  inline "内置整数运算基准 ..."
+  inline "内置整数基准"
   local t0 t1 score
   t0="$(date +%s%N 2>/dev/null || echo 0)"
   awk 'BEGIN{n=0; for(i=2;i<60000;i++){p=1; for(j=2;j*j<=i;j++){if(i%j==0){p=0;break}} n+=p} print n}' >/dev/null 2>&1

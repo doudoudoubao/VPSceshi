@@ -488,7 +488,7 @@ _run_unlock_suite() {
   local it name fn r
   for it in "${items[@]}"; do
     name="${it%%|*}"; fn="${it##*|}"
-    inline "$name ..."
+    inline "$name"
     r="$($fn 2>/dev/null)"
     [ -z "$r" ] && r="$NA"
     inline_done "$r"

@@ -54,13 +54,17 @@ step() {
   STEP_NO=$((STEP_NO + 1))
   [ "$QUIET" = "1" ] && return 0
   # 带上累计耗时，卡住时一眼看出卡了多久
-  local el=""
+  local el="" elw=0
   if [ "$RUN_T0" -gt 0 ]; then
     local s=$(( $(date +%s) - RUN_T0 ))
-    el="$(printf ' %s[+%d:%02d]%s' "$C_DIM" $((s/60)) $((s%60)) "$C_RST")"
+    el="$(printf '[+%d:%02d]' $((s/60)) $((s%60)))"
+    elw=${#el}
   fi
-  printf '\n%s%s━━━ [%02d] %s%s %s━━━━━━━━━━%s\n' \
-    "$C_B" "$C_BL" "$STEP_NO" "$*" "$el" "$C_BL" "$C_RST"
+  # 不用 ━ 铺满行：这类制表符属于「东亚模糊宽度」，
+  # 中文环境的终端可能按 2 列渲染，铺满就必然折行。
+  # 短前缀 + 不留尾巴，任何宽度都不会乱。
+  printf '\n%s%s▌[%02d] %s%s %s%s%s\n' \
+    "$C_B" "$C_BL" "$STEP_NO" "$*" "$C_RST" "$C_DIM" "$el" "$C_RST"
 }
 
 # ---------- 结果存储 ----------
@@ -251,6 +255,75 @@ mark_no()   { printf '否'; }
 timer_start() { _T0=$(date +%s); }
 timer_end()   { echo $(( $(date +%s) - ${_T0:-0} )); }
 
+# ---------- 终端宽度自适应排版 ----------
+#
+# printf 的 %-32s 按字节补位，而中文一个字占 3 字节却只显示 2 列，
+# 补出来的宽度全是错的；再碰上手机 SSH 那种 40 列的窄终端，
+# 每行都在乱折。所以这里按「显示宽度」自己算补位。
+
+TERM_W=80      # 终端列数
+LABEL_W=28     # 进度行标签列宽
+
+_detect_term() {
+  local w=""
+  [ -n "$COLUMNS" ] && w="$COLUMNS"
+  [ -z "$w" ] && have tput && w="$(tput cols 2>/dev/null)"
+  [ -z "$w" ] && have stty && w="$(stty size 2>/dev/null | awk '{print $2}')"
+  case "$w" in ''|*[!0-9]*) w=80 ;; esac
+  [ "$w" -lt 32 ] && w=32
+  [ "$w" -gt 140 ] && w=140
+  TERM_W="$w"
+  # 标签列宽随终端走：窄屏就别留那么宽的空档
+  if   [ "$TERM_W" -ge 78 ]; then LABEL_W=30
+  elif [ "$TERM_W" -ge 60 ]; then LABEL_W=24
+  elif [ "$TERM_W" -ge 46 ]; then LABEL_W=18
+  else                            LABEL_W=14
+  fi
+}
+_detect_term
+
+# 字符串的终端显示宽度：CJK / emoji 算 2 列，ASCII 算 1 列
+_dw() {
+  # 纯 ASCII 走快路径，省掉一次 awk
+  case "$1" in
+    *[^\ -~]*) ;;
+    *) printf '%s' "${#1}"; return ;;
+  esac
+  LC_ALL=C awk -v s="$1" 'BEGIN{
+    w=0
+    for (i=1; i<=length(s); i++) {
+      c = substr(s,i,1)
+      if      (c <  "\200") w++      # ASCII
+      else if (c <  "\300") ;        # UTF-8 连续字节，不计宽
+      else if (c <  "\340") w++      # 2 字节序列 = 1 列
+      else                  w += 2   # 3/4 字节（CJK / emoji）= 2 列
+    }
+    print w }'
+}
+
+# 把字符串按显示宽度补到 n 列；超长就截断加省略号
+_pad() {
+  local s="$1" n="$2" w
+  w="$(_dw "$s")"
+  if [ "$w" -gt "$n" ]; then
+    # 超宽时按字符逐个截，直到显示宽度放得下
+    local out="" c cw=0
+    local i len=${#s}
+    for (( i=0; i<len; i++ )); do
+      c="${s:i:1}"
+      local d; d="$(_dw "$c")"
+      [ $((cw + d)) -gt $((n - 1)) ] && break
+      out="$out$c"; cw=$((cw + d))
+    done
+    printf '%s…%*s' "$out" $(( n - cw - 1 )) ''
+    return
+  fi
+  printf '%s%*s' "$s" $(( n - w )) ''
+}
+
 # 进度条式的行内提示
-inline() { [ "$QUIET" = "1" ] && return 0; printf '    %s%-32s%s' "$C_DIM" "$1" "$C_RST"; }
+inline() {
+  [ "$QUIET" = "1" ] && return 0
+  printf '  %s%s%s ' "$C_DIM" "$(_pad "$1" "$LABEL_W")" "$C_RST"
+}
 inline_done() { [ "$QUIET" = "1" ] && return 0; printf '%s\n' "$1"; }

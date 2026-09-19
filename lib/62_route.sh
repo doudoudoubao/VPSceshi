@@ -112,7 +112,7 @@ test_route() {
     [ "$FAST_MODE" = "1" ] && rlimit=3
     [ "$ROUTE_FULL" = "1" ] && rlimit=99
     [ "$n" -gt "$rlimit" ] && break
-    inline "$label ($ip) ..."
+    inline "$label"
     out="$(_trace_one "$ip")"
     if [ -n "$out" ]; then
       line="$(_guess_line "$out")"

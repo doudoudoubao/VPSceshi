@@ -55,7 +55,7 @@ test_ipquality() {
   row_add ipq_base "时区" "$(kv_or net.tz '未知')"
 
   # ---------- 2. IP 类型判定 ----------
-  inline "IP 类型判定 ..."
+  inline "IP 类型判定"
   local usetype="未知" company="" abuser=""
   local j; j="$(xcurl4 "https://api.ipapi.is/?q=${IP4}")"
   if [ -n "$j" ]; then
@@ -89,7 +89,7 @@ test_ipquality() {
   kv_set ipq.usetype "$usetype"
 
   # ---------- 3. 欺诈分 / 风险分 ----------
-  inline "Scamalytics 欺诈分 ..."
+  inline "Scamalytics 欺诈分"
   local html score risk
   html="$(xcurl4 "https://scamalytics.com/ip/${IP4}")"
   if [ -n "$html" ]; then
@@ -109,7 +109,7 @@ test_ipquality() {
   [ -n "$risk" ] && row_add ipq_risk "Scamalytics 风险等级" "$risk"
 
   # AbuseIPDB 公开页面（无 key 时抓取概要）
-  inline "AbuseIPDB 举报记录 ..."
+  inline "AbuseIPDB 举报"
   local ab conf
   ab="$(xcurl4 -H 'Accept: text/html' "https://www.abuseipdb.com/check/${IP4}")"
   if [ -n "$ab" ]; then
@@ -130,7 +130,7 @@ test_ipquality() {
   # ---------- 4. 原生 / 广播判定 ----------
   # 判据：IP 段的注册国（RDAP）与实际地理定位国是否一致。
   # 一致 = 原生 IP；不一致 = 该段在别处注册、广播到当前位置使用。
-  inline "原生 / 广播判定 ..."
+  inline "原生 / 广播判定"
   local reg_cc geo_cc verdict reason
   reg_cc="$(kv_get nq.rdap_cc)"
   geo_cc="$(kv_get net.cc)"
@@ -158,7 +158,7 @@ test_ipquality() {
   # ---------- 5. 邮件黑名单 ----------
   need_tool dig >/dev/null 2>&1 || true
   # 分两档：主流黑名单命中影响大（黑名单），次级库命中记为「已标记」
-  inline "DNSBL 黑名单检测 ..."
+  inline "DNSBL 黑名单"
   local rbls_major=(
     "zen.spamhaus.org"
     "bl.spamcop.net"
@@ -204,7 +204,7 @@ test_ipquality() {
   fi
 
   # ---------- 6. 端口与邮局 ----------
-  inline "出站端口检测 ..."
+  inline "出站端口检测"
   local p25 p465 p587
   _port_open "smtp.gmail.com" 25  6 && p25="✅ 放行"  || p25="❌ 封锁"
   _port_open "smtp.gmail.com" 465 6 && p465="✅ 放行" || p465="❌ 封锁"

@@ -181,7 +181,8 @@ install_deps() {
   done
   DEPS_REPORT="可用: ${ok[*]}"
   [ ${#miss[@]} -gt 0 ] && DEPS_REPORT="$DEPS_REPORT / 缺失: ${miss[*]}"
-  log_ok "$DEPS_REPORT"
+  log_ok "可用: ${ok[*]}"
+  [ ${#miss[@]} -gt 0 ] && log_warn "缺失: ${miss[*]}（相关测试会降级）"
   kv_set "meta.deps" "$DEPS_REPORT"
 }
 

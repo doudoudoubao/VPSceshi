@@ -150,7 +150,7 @@ collect_profile() {
   if [ -n "$P_VENDOR$P_PLAN$P_DC" ]; then
     log_ok "${P_VENDOR} ${P_PLAN} @ ${P_DC}"
   else
-    log_info "未提供商家/套餐信息，可用 --vendor/--plan/--dc 或 --config 补充"
+    log_info "未提供商家/套餐信息（可用 --config 补充）"
   fi
   log_ok "本机公网 IP：IPv4 ${v4c} 个 / IPv6 ${v6c} 个"
 }

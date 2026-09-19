@@ -33,7 +33,7 @@ test_netquality() {
   fi
 
   # ---------- 1. 前缀与 Origin AS ----------
-  inline "查询 BGP 前缀与 Origin AS ..."
+  inline "BGP 前缀 / Origin AS"
   local j prefix asns
   j="$(_ripestat network-info "$IP4")"
   prefix="$(jget "$j" '.data.prefix')"
@@ -48,7 +48,7 @@ test_netquality() {
 
   # ---------- 2. ASN 概览 ----------
   if [ -n "$ASN_NUM" ]; then
-    inline "查询 ASN 概览 ..."
+    inline "ASN 概览"
     local jo holder
     jo="$(_ripestat as-overview "AS${ASN_NUM}")"
     holder="$(jget "$jo" '.data.holder')"
@@ -65,7 +65,7 @@ test_netquality() {
   fi
 
   # ---------- 3. RDAP 注册信息（注册主体 / 注册地 / 日期）----------
-  inline "查询 RDAP 注册信息 ..."
+  inline "RDAP 注册信息"
   local jd name country reg_date upd_date rir
   jd="$(xcurl4 -H 'Accept: application/rdap+json' "https://rdap.org/ip/${IP4}")"
   if [ -n "$jd" ]; then
@@ -94,7 +94,7 @@ test_netquality() {
 
   # ---------- 4. 上游 / 对等互联（RIPEstat 邻居）----------
   if [ -n "$ASN_NUM" ]; then
-    inline "查询上游与对等互联 ..."
+    inline "上游 / 对等互联"
     local jn up down peer
     jn="$(_ripestat asn-neighbours "AS${ASN_NUM}")"
     if have jq; then
@@ -108,7 +108,7 @@ test_netquality() {
     [ -n "$peer" ] && row_add nq_peer "不确定方向邻居" "$peer 个"
 
     # ---------- 5. PeeringDB：IXP 与对等 ----------
-    inline "查询 PeeringDB IXP ..."
+    inline "PeeringDB IXP"
     local jp netid ixcount
     jp="$(xcurl4 "https://www.peeringdb.com/api/net?asn=${ASN_NUM}")"
     netid="$(jget "$jp" '.data[0].id')"
