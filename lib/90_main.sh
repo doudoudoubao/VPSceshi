@@ -28,6 +28,7 @@ ${VPSTEST_NAME} v${VPSTEST_VERSION} — VPS / 服务器一键全能测评
       --geekbench         启用 Geekbench 6 跑分（联网上传结果）
       --iperf             启用国际节点 iperf3 带宽测试
       --ns-no-tabs        NodeSeek 版不用标签页容器，退化成普通标题
+      --no-deps           不自动安装依赖，只用系统现有工具（apt 被占用时用）
       --show-ip           报告中显示完整出口 IP（默认部分遮蔽）
       --no-color          关闭彩色输出
   -q, --quiet             安静模式，只输出最终结果路径
@@ -85,6 +86,7 @@ parse_args() {
       --geekbench)    ENABLE_GEEKBENCH=1; shift ;;
       --iperf)        ENABLE_IPERF=1; shift ;;
       --ns-no-tabs)   NS_USE_TABS=0; shift ;;
+      --no-deps)      SKIP_DEPS=1; shift ;;
       --show-ip)      MASK_IP=0; shift ;;
       # —— 配置核对 ——
       -c|--config)    load_profile_file "$2" || exit 1; shift 2 ;;

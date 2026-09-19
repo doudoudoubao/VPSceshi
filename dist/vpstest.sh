@@ -8,7 +8,7 @@
 # 一键运行：
 #   bash <(curl -sL https://github.com/doudoudoubao/VPSceshi/raw/main/dist/vpstest.sh)
 #
-# 生成时间： 2026-09-19 15:28:48 UTC
+# 生成时间： 2026-09-19 15:55:14 UTC
 # ============================================================
 
 set -o pipefail
@@ -420,9 +420,21 @@ collect_profile() {
 PKG_MGR=""
 PKG_INSTALL=""
 PKG_UPDATED=0
+SKIP_DEPS=0          # --no-deps：完全不装依赖
+DEP_TIMEOUT=120      # 单个包安装的上限秒数
+DEP_BUDGET=300       # 整个依赖阶段的总预算秒数
+DEP_DEADLINE=0       # 由 install_deps 设置的截止时间戳
 
 detect_pkg_mgr() {
-  if   have apt-get; then PKG_MGR=apt;    PKG_INSTALL="apt-get install -y -qq"
+  if have apt-get; then
+    PKG_MGR=apt
+    # 关键三件事，少一个都可能让脚本卡死：
+    #   DEBIAN_FRONTEND=noninteractive  不弹 debconf 配置界面
+    #   DPkg::Lock::Timeout=30          拿不到 dpkg 锁就放弃，别无限等
+    #     （Debian/Ubuntu 新机开机后 unattended-upgrades 会占着锁）
+    #   --force-confold                 配置文件冲突时保留旧的，不交互询问
+    export DEBIAN_FRONTEND=noninteractive
+    PKG_INSTALL="apt-get install -y -qq -o DPkg::Lock::Timeout=30 -o Dpkg::Options::=--force-confold"
   elif have dnf;     then PKG_MGR=dnf;    PKG_INSTALL="dnf install -y -q"
   elif have yum;     then PKG_MGR=yum;    PKG_INSTALL="yum install -y -q"
   elif have apk;     then PKG_MGR=apk;    PKG_INSTALL="apk add --no-cache"
@@ -432,14 +444,49 @@ detect_pkg_mgr() {
   else PKG_MGR=""; fi
 }
 
+# dpkg 锁被别人占着的话，apt 会一直干等。新装的 Debian/Ubuntu 开机后
+# unattended-upgrades 常占着锁好几分钟，那段时间脚本看起来就是死机。
+# 这里先探一下，等不到就直接放弃安装，让后面的测试走降级路径。
+_pkg_busy() {
+  pgrep -x apt        >/dev/null 2>&1 && return 0
+  pgrep -x apt-get    >/dev/null 2>&1 && return 0
+  pgrep -x dpkg       >/dev/null 2>&1 && return 0
+  pgrep -f unattended-upgr >/dev/null 2>&1 && return 0
+  # 有 fuser 就再确认一次锁文件
+  if have fuser; then
+    run_to 5 fuser /var/lib/dpkg/lock-frontend >/dev/null 2>&1 && return 0
+  fi
+  return 1
+}
+
+_wait_pkg_lock() {
+  [ "$PKG_MGR" = "apt" ] || return 0
+  _pkg_busy || return 0
+  log_warn "系统正在执行 apt / unattended-upgrades，等待其完成（最多 60 秒）..."
+  local waited=0
+  while [ "$waited" -lt 60 ]; do
+    sleep 5
+    waited=$((waited + 5))
+    if ! _pkg_busy; then
+      log_ok "包管理器已空闲（等待 ${waited} 秒）"
+      return 0
+    fi
+  done
+  log_warn "包管理器仍被占用，跳过自动安装依赖；缺失的工具会走降级方案"
+  log_warn "想自己处理：Ctrl+C 后执行 systemctl stop unattended-upgrades，再重跑"
+  return 1
+}
+
 pkg_update_once() {
   [ "$PKG_UPDATED" = "1" ] && return 0
   PKG_UPDATED=1
+  log_info "更新软件包索引（最多 90 秒）..."
   case "$PKG_MGR" in
-    apt)    run_to 180 apt-get update -qq >/dev/null 2>&1 ;;
-    apk)    run_to 120 apk update >/dev/null 2>&1 ;;
-    pacman) run_to 180 pacman -Sy --noconfirm >/dev/null 2>&1 ;;
+    apt)    run_to 90 apt-get update -qq -o DPkg::Lock::Timeout=30 >/dev/null 2>&1 ;;
+    apk)    run_to 90 apk update >/dev/null 2>&1 ;;
+    pacman) run_to 90 pacman -Sy --noconfirm >/dev/null 2>&1 ;;
   esac
+  return 0
 }
 
 # 各发行版的包名差异映射
@@ -465,13 +512,27 @@ pkg_name_for() {
 ensure_cmd() {
   local cmd="$1" pkg="${2:-}"
   have "$cmd" && return 0
+  [ "$SKIP_DEPS" = "1" ] && return 1
   [ -z "$PKG_MGR" ] && return 1
   [ "$(id -u)" != "0" ] && return 1
   [ -z "$pkg" ] && pkg="$(pkg_name_for "$cmd")"
+
+  # 整个依赖阶段有总预算，网络烂的机器上不能把时间全耗在装包上
+  if [ "$DEP_DEADLINE" -gt 0 ] && [ "$(date +%s)" -ge "$DEP_DEADLINE" ]; then
+    [ "$SKIP_DEPS" != "1" ] && {
+      SKIP_DEPS=1
+      log_warn "依赖安装已超过 ${DEP_BUDGET} 秒预算，剩余的包不再尝试（缺的走降级）"
+    }
+    return 1
+  fi
+
   pkg_update_once
+  inline "安装 $pkg ..."
   # shellcheck disable=SC2086
-  run_to 300 $PKG_INSTALL "$pkg" >/dev/null 2>&1
-  have "$cmd"
+  run_to "$DEP_TIMEOUT" $PKG_INSTALL "$pkg" >/dev/null 2>&1
+  if have "$cmd"; then inline_done "✅"; return 0; fi
+  inline_done "失败（跳过）"
+  return 1
 }
 
 # ping 在部分发行版名为 ping，Debian 12 最小镜像默认不带
@@ -498,6 +559,14 @@ install_deps() {
   fi
   if [ "$(id -u)" != "0" ]; then
     log_warn "非 root 运行，无法自动安装依赖，部分测试可能降级或跳过"
+  fi
+
+  if [ "$SKIP_DEPS" = "1" ]; then
+    log_info "已指定 --no-deps，跳过依赖安装，只用系统现有工具"
+  elif [ -n "$PKG_MGR" ] && [ "$(id -u)" = "0" ]; then
+    # 拿不到包管理器就别装了，硬等只会让脚本看起来死掉
+    _wait_pkg_lock || SKIP_DEPS=1
+    DEP_DEADLINE=$(( $(date +%s) + DEP_BUDGET ))
   fi
 
   local base=(curl wget tar gzip)
@@ -4862,6 +4931,7 @@ ${VPSTEST_NAME} v${VPSTEST_VERSION} — VPS / 服务器一键全能测评
       --geekbench         启用 Geekbench 6 跑分（联网上传结果）
       --iperf             启用国际节点 iperf3 带宽测试
       --ns-no-tabs        NodeSeek 版不用标签页容器，退化成普通标题
+      --no-deps           不自动安装依赖，只用系统现有工具（apt 被占用时用）
       --show-ip           报告中显示完整出口 IP（默认部分遮蔽）
       --no-color          关闭彩色输出
   -q, --quiet             安静模式，只输出最终结果路径
@@ -4919,6 +4989,7 @@ parse_args() {
       --geekbench)    ENABLE_GEEKBENCH=1; shift ;;
       --iperf)        ENABLE_IPERF=1; shift ;;
       --ns-no-tabs)   NS_USE_TABS=0; shift ;;
+      --no-deps)      SKIP_DEPS=1; shift ;;
       --show-ip)      MASK_IP=0; shift ;;
       # —— 配置核对 ——
       -c|--config)    load_profile_file "$2" || exit 1; shift 2 ;;
