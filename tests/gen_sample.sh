@@ -324,13 +324,14 @@ build_verdict >/dev/null 2>&1
 
 mkdir -p "$OUT"
 gen_markdown > "$OUT/sample-report.md"
+gen_nodeseek > "$OUT/sample-report.nodeseek.md"
 gen_bbcode   > "$OUT/sample-report.bbcode"
 gen_html     > "$OUT/sample-report.html"
 gen_json     > "$OUT/sample-report.json"
 gen_txt      > "$OUT/sample-report.txt"
 
 echo "[+] 样例报告已生成到: $OUT"
-for e in md bbcode html json txt; do
+for e in md nodeseek.md bbcode html json txt; do
   printf '    %-28s %s\n' "sample-report.$e" "$(wc -c < "$OUT/sample-report.$e") 字节"
 done
 
@@ -366,4 +367,40 @@ check "含 BGP 前缀"            "grep -q '154.31.112.0/24' '$OUT/sample-report
 check "含 FAQ"                 "grep -q '数据会变吗\|这些数据会变吗' '$OUT/sample-report.md'"
 check "含 Geekbench 链接"      "grep -q 'browser.geekbench.com' '$OUT/sample-report.md'"
 check "TXT 含 12 章"           "[ \$(grep -c '^\[ [一二三四五六七八九十]' '$OUT/sample-report.txt') -eq 12 ]"
+
+# ---------- NodeSeek 版：容器嵌套必须闭合，否则整贴排版崩掉 ----------
+NS="$OUT/sample-report.nodeseek.md"
+ns_balance() {
+  awk '
+    # 代码块里的 ::: 是原始输出，不算容器
+    /^```/ { fence = !fence; next }
+    fence  { next }
+    /^:::: [^ ]/ { d4++; next }
+    /^::::$/     { d4--; if (d4 < 0) { print "4 级容器提前闭合，行 " NR; bad=1 } next }
+    /^::: [^ ]/  { d3++; next }
+    /^:::$/      { d3--; if (d3 < 0) { print "3 级容器提前闭合，行 " NR; bad=1 } next }
+    END {
+      if (d4 != 0) { print "tabs 容器未闭合，差 " d4; bad=1 }
+      if (d3 != 0) { print "tab-item/details 容器未闭合，差 " d3; bad=1 }
+      exit bad
+    }' "$1"
+}
+check "NodeSeek 容器闭合"       "ns_balance '$NS'"
+check "NodeSeek 含 12 章"       "[ \$(grep -c '^## [一二三四五六七八九十]' '$NS') -eq 12 ]"
+check "NodeSeek 用了 tabs 容器"  "grep -q '^:::: tabs' '$NS'"
+check "NodeSeek 用了 tab-item"   "grep -q '^::: tab-item ' '$NS'"
+check "NodeSeek 用了 details"    "grep -q '^::: details ' '$NS'"
+check "NodeSeek 无 HTML details" "! grep -q '<details>' '$NS'"
+check "NodeSeek 无 BBCode 残留"  "! grep -q '\[table\]\|\[/td\]\|\[size=' '$NS'"
+check "NodeSeek 有评分进度条"    "grep -q '█' '$NS'"
+check "NodeSeek 摘要含结论"      "grep -q '综合评分.*100' '$NS'"
+check "NodeSeek FAQ 展开成问答"  "grep -q '^\*\*Q：' '$NS'"
+# 关掉 tabs 后必须仍然闭合，且退化成三级标题
+NS_USE_TABS=0
+gen_nodeseek > "$OUT/.ns-notabs.md"
+check "NodeSeek 无 tabs 模式闭合"   "ns_balance '$OUT/.ns-notabs.md'"
+check "NodeSeek 无 tabs 模式无容器" "! grep -q '^:::: tabs' '$OUT/.ns-notabs.md'"
+check "NodeSeek 无 tabs 模式有标题" "grep -q '^### ' '$OUT/.ns-notabs.md'"
+rm -f "$OUT/.ns-notabs.md"
+NS_USE_TABS=1
 exit "$fail"

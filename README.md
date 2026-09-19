@@ -26,23 +26,40 @@ git clone https://github.com/doudoudoubao/VPSceshi.git
 cd VPSceshi && bash vpstest.sh -n "我的小鸡"
 ```
 
-跑完会在 `./vpstest-result/` 下生成 **5 种格式**的同一份报告：
+跑完会在 `./vpstest-result/` 下生成 **6 种格式**的同一份报告：
 
 | 文件 | 用途 |
 | :--- | :--- |
-| `report-*.md` | 博客 / GitHub / Hexo / Typecho，Markdown 表格 |
-| `report-*.bbcode` | 论坛（Discuz、hostloc、NodeSeek 等），BBCode 表格 |
+| `report-*.md` | 博客 / GitHub / Hexo / Typecho，标准 Markdown |
+| `report-*.nodeseek.md` | **[NodeSeek](https://www.nodeseek.com) 专用排版**，用论坛的标签页与折叠容器 |
+| `report-*.bbcode` | Discuz 系论坛（hostloc 等），BBCode 表格 |
 | `report-*.html` | 独立网页，自带样式与深色模式，可直接上传静态托管 |
 | `report-*.json` | 机器可读，方便二次处理 / 入库 / 做对比 |
 | `report-*.txt` | 纯文本，贴哪都不会乱 |
 
-同时会写一份 `latest.*` 方便脚本取用。发论坛直接 `cat vpstest-result/latest.bbcode` 全选复制即可。
+同时会写一份 `latest.*` 方便脚本取用。发帖直接 `cat vpstest-result/latest.nodeseek.md` 全选复制即可。
 
 📄 **示例报告**：[Markdown](docs/sample-report.md) ·
+[NodeSeek](docs/sample-report.nodeseek.md) ·
 [BBCode](docs/sample-report.bbcode) ·
 [HTML](docs/sample-report.html) ·
 [JSON](docs/sample-report.json) ·
 [TXT](docs/sample-report.txt)
+
+### NodeSeek 排版说明
+
+NodeSeek 用的是 markdown-it，**不是 Discuz 那套 BBCode**，而且开了
+`markdown-it-container` 扩展。所以它单独出一份 `.nodeseek.md`，用上论坛特有的容器语法：
+
+- **标签页**（`:::: tabs` / `::: tab-item`）——硬件、去程延迟、网络质量、测速、解锁、IP 质量
+  这些多表格的章节收进标签页，一屏一个，不用滚半天
+- **折叠**（`::: details`）——解锁完整清单和每一段路由 / MTR 原始输出各自折叠，点开哪段看哪段
+- **评分条**——论坛没有 CSS，评分用 `████████░░░░` 方块字符画在表格里
+
+这些容器语法只在 NodeSeek 生效，贴到 GitHub 或博客会变成裸文本，所以**没有**动原来的
+`.md`，两份各管各的。万一论坛哪天改了关键字，改 `lib/74_report_nodeseek.sh`
+顶部的 `NS_DETAILS_KW` / `NS_TABS_KW` / `NS_TAB_ITEM_KW` 三个变量就行，正文逻辑不用碰。
+如果标签页渲染不出来，加 `--ns-no-tabs` 会退化成普通三级标题，内容一个不少。
 
 ---
 
@@ -151,6 +168,7 @@ CPU 25 + 磁盘 20 + 网络带宽 25 + 国内延迟 15 + 解锁 10 + IP 质量 5
     --speedtest <模式>  cn | global | all | off（默认 cn）
     --geekbench         启用 Geekbench 6 跑分
     --iperf             启用国际节点 iperf3 带宽测试
+    --ns-no-tabs        NodeSeek 版不用标签页容器，退化成普通三级标题
     --show-ip           报告里显示完整出口 IP（默认部分遮蔽）
     --no-color          关闭彩色输出
 -q, --quiet             安静模式，只输出报告路径
@@ -259,12 +277,13 @@ VPSceshi/
 │   ├── 65_score.sh         # 综合评分
 │   ├── 66_iperf.sh         # ⑧ 国际节点 iperf3 带宽
 │   ├── 67_verdict.sh       # ⑪ 适用场景 / 购买建议 / FAQ
-│   ├── 70_report_md.sh     # Markdown 报告
-│   ├── 71_report_bbcode.sh # BBCode 报告
+│   ├── 70_report_md.sh     # Markdown 报告（博客）
+│   ├── 71_report_bbcode.sh # BBCode 报告（Discuz 系）
 │   ├── 72_report_html.sh   # HTML 报告
 │   ├── 73_report_json.sh   # JSON / TXT 报告
+│   ├── 74_report_nodeseek.sh # NodeSeek 专用排版（tabs / details 容器）
 │   └── 90_main.sh          # 参数解析与主流程
-├── tests/gen_sample.sh     # 用样例数据跑通全部报告路径并校验（43 项断言）
+├── tests/gen_sample.sh     # 用样例数据跑通全部报告路径并校验（56 项断言）
 ├── examples/               # 配置文件与去程导入的示例
 └── docs/
     ├── import-format.md    # 去程数据与配置文件的格式说明

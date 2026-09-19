@@ -27,6 +27,7 @@ ${VPSTEST_NAME} v${VPSTEST_VERSION} — VPS / 服务器一键全能测评
       --speedtest <模式>  cn | global | all | off（默认 cn）
       --geekbench         启用 Geekbench 6 跑分（联网上传结果）
       --iperf             启用国际节点 iperf3 带宽测试
+      --ns-no-tabs        NodeSeek 版不用标签页容器，退化成普通标题
       --show-ip           报告中显示完整出口 IP（默认部分遮蔽）
       --no-color          关闭彩色输出
   -q, --quiet             安静模式，只输出最终结果路径
@@ -83,6 +84,7 @@ parse_args() {
       --speedtest)    SPEEDTEST_MODE="$2"; shift 2 ;;
       --geekbench)    ENABLE_GEEKBENCH=1; shift ;;
       --iperf)        ENABLE_IPERF=1; shift ;;
+      --ns-no-tabs)   NS_USE_TABS=0; shift ;;
       --show-ip)      MASK_IP=0; shift ;;
       # —— 配置核对 ——
       -c|--config)    load_profile_file "$2" || exit 1; shift 2 ;;
@@ -144,15 +146,16 @@ write_reports() {
   stamp="$(date '+%Y%m%d-%H%M%S')"
   base="$OUT_DIR/report-$stamp"
 
-  gen_markdown > "${base}.md"       2>/dev/null && log_ok "Markdown : ${base}.md"
-  gen_bbcode   > "${base}.bbcode"   2>/dev/null && log_ok "BBCode   : ${base}.bbcode"
-  gen_html     > "${base}.html"     2>/dev/null && log_ok "HTML     : ${base}.html"
-  gen_json     > "${base}.json"     2>/dev/null && log_ok "JSON     : ${base}.json"
-  gen_txt      > "${base}.txt"      2>/dev/null && log_ok "纯文本   : ${base}.txt"
+  gen_markdown > "${base}.md"          2>/dev/null && log_ok "Markdown : ${base}.md"
+  gen_nodeseek > "${base}.nodeseek.md" 2>/dev/null && log_ok "NodeSeek : ${base}.nodeseek.md"
+  gen_bbcode   > "${base}.bbcode"      2>/dev/null && log_ok "BBCode   : ${base}.bbcode"
+  gen_html     > "${base}.html"        2>/dev/null && log_ok "HTML     : ${base}.html"
+  gen_json     > "${base}.json"        2>/dev/null && log_ok "JSON     : ${base}.json"
+  gen_txt      > "${base}.txt"         2>/dev/null && log_ok "纯文本   : ${base}.txt"
 
   # 同时维护一份 latest.* 方便脚本化取用
   local ext
-  for ext in md bbcode html json txt; do
+  for ext in md nodeseek.md bbcode html json txt; do
     cp -f "${base}.${ext}" "$OUT_DIR/latest.${ext}" 2>/dev/null
   done
 
@@ -168,13 +171,15 @@ print_summary() {
   printf '  综合评分  : %s%s / 100 — %s%s\n' "$C_B" "$(kv_or score.total 'N/A')" "$(kv_or score.grade '')" "$C_RST"
   printf '  总耗时    : %s\n' "$(kv_or meta.duration 'N/A')"
   printf '\n  报告文件:\n'
-  printf '    博客 Markdown : %s.md\n'     "$REPORT_BASE"
-  printf '    论坛 BBCode   : %s.bbcode\n' "$REPORT_BASE"
-  printf '    网页 HTML     : %s.html\n'   "$REPORT_BASE"
-  printf '    数据 JSON     : %s.json\n'   "$REPORT_BASE"
-  printf '    纯文本 TXT    : %s.txt\n'    "$REPORT_BASE"
-  printf '\n  %s发论坛直接复制:%s cat %s.bbcode\n' "$C_C" "$C_RST" "$REPORT_BASE"
-  printf '  %s发博客直接复制:%s cat %s.md\n\n'     "$C_C" "$C_RST" "$REPORT_BASE"
+  printf '    博客 Markdown  : %s.md\n'          "$REPORT_BASE"
+  printf '    NodeSeek 专用  : %s.nodeseek.md\n' "$REPORT_BASE"
+  printf '    论坛 BBCode    : %s.bbcode\n'      "$REPORT_BASE"
+  printf '    网页 HTML      : %s.html\n'        "$REPORT_BASE"
+  printf '    数据 JSON      : %s.json\n'        "$REPORT_BASE"
+  printf '    纯文本 TXT     : %s.txt\n'         "$REPORT_BASE"
+  printf '\n  %s发 NodeSeek:%s   cat %s.nodeseek.md\n' "$C_C" "$C_RST" "$REPORT_BASE"
+  printf '  %s发 Discuz 论坛:%s cat %s.bbcode\n'       "$C_C" "$C_RST" "$REPORT_BASE"
+  printf '  %s发博客:%s         cat %s.md\n\n'         "$C_C" "$C_RST" "$REPORT_BASE"
 }
 
 main() {
