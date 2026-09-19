@@ -21,6 +21,7 @@ test_cpu() {
   cores="$(kv_get sys.cpu.cores)"; [ -z "$cores" ] && cores=1
   secs=10; [ "$FAST_MODE" = "1" ] && secs=5
 
+  need_tool sysbench >/dev/null 2>&1 || true
   if have sysbench; then
     inline "sysbench 单核 (${secs}s) ..."
     local s1; s1="$(_sysbench_cpu 1 "$secs")"

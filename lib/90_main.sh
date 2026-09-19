@@ -29,6 +29,8 @@ ${VPSTEST_NAME} v${VPSTEST_VERSION} — VPS / 服务器一键全能测评
       --iperf             启用国际节点 iperf3 带宽测试
       --ns-no-tabs        NodeSeek 版不用标签页容器，退化成普通标题
       --no-deps           不自动安装依赖，只用系统现有工具（apt 被占用时用）
+      --speedtest-full    测速跑满 10 个节点（默认 6 个，省时间和流量）
+      --route-full        回程路由跑满 10 个目标（默认 6 个）
       --show-ip           报告中显示完整出口 IP（默认部分遮蔽）
       --no-color          关闭彩色输出
   -q, --quiet             安静模式，只输出最终结果路径
@@ -81,12 +83,14 @@ parse_args() {
       -s|--skip)      SKIP_MODULES="$2"; shift 2 ;;
       --fast)         FAST_MODE=1; shift ;;
       --full)         FAST_MODE=0; ENABLE_GEEKBENCH=1; ENABLE_IPERF=1
-                      SPEEDTEST_MODE="all"; shift ;;
+                      SPEEDTEST_MODE="all"; SPEEDTEST_FULL=1; ROUTE_FULL=1; shift ;;
       --speedtest)    SPEEDTEST_MODE="$2"; shift 2 ;;
       --geekbench)    ENABLE_GEEKBENCH=1; shift ;;
       --iperf)        ENABLE_IPERF=1; shift ;;
       --ns-no-tabs)   NS_USE_TABS=0; shift ;;
       --no-deps)      SKIP_DEPS=1; shift ;;
+      --speedtest-full) SPEEDTEST_FULL=1; shift ;;
+      --route-full)   ROUTE_FULL=1; shift ;;
       --show-ip)      MASK_IP=0; shift ;;
       # —— 配置核对 ——
       -c|--config)    load_profile_file "$2" || exit 1; shift 2 ;;
@@ -231,6 +235,7 @@ main() {
 
   trap cleanup EXIT INT TERM
   local t_start; t_start="$(date +%s)"
+  RUN_T0="$t_start"
 
   setup_bin_dir
   install_deps

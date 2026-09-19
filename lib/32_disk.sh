@@ -26,10 +26,10 @@ _dd_write() {
   local bs="$1" count="$2" f="$DISK_WORKDIR/.vpstest_dd"
   local o
   # dd 把速度统计写在 stderr，必须用 run_to2 合并过来
-  o="$(run_to2 180 dd if=/dev/zero of="$f" bs="$bs" count="$count" oflag=direct conv=fsync)"
+  o="$(run_to2 90 dd if=/dev/zero of="$f" bs="$bs" count="$count" oflag=direct conv=fsync)"
   if ! printf '%s' "$o" | grep -qE 'copied|bytes'; then
     # 部分文件系统 / 容器不支持 O_DIRECT，退回普通写入
-    o="$(run_to2 180 dd if=/dev/zero of="$f" bs="$bs" count="$count" conv=fsync)"
+    o="$(run_to2 90 dd if=/dev/zero of="$f" bs="$bs" count="$count" conv=fsync)"
   fi
   printf '%s' "$o" | grep -Eo '[0-9.]+ [KMG]?B/s' | tail -1
 }
@@ -40,9 +40,9 @@ _dd_read() {
   sync 2>/dev/null
   [ -w /proc/sys/vm/drop_caches ] && echo 3 > /proc/sys/vm/drop_caches 2>/dev/null
   local o
-  o="$(run_to2 180 dd if="$f" of=/dev/null bs="$bs" count="$count" iflag=direct)"
+  o="$(run_to2 90 dd if="$f" of=/dev/null bs="$bs" count="$count" iflag=direct)"
   if ! printf '%s' "$o" | grep -qE 'copied|bytes'; then
-    o="$(run_to2 180 dd if="$f" of=/dev/null bs="$bs" count="$count")"
+    o="$(run_to2 90 dd if="$f" of=/dev/null bs="$bs" count="$count")"
   fi
   printf '%s' "$o" | grep -Eo '[0-9.]+ [KMG]?B/s' | tail -1
 }
@@ -115,7 +115,7 @@ test_disk() {
   if [ "$FAST_MODE" = "1" ]; then
     specs="1M:512 128K:2000"
   else
-    specs="1M:1000 1M:1000 128K:8000"
+    specs="1M:1000 128K:8000"
   fi
   local i=0 sum_w=0 n_w=0
   for s in $specs; do
@@ -140,9 +140,10 @@ test_disk() {
   rm -f "$DISK_WORKDIR/.vpstest_dd" 2>/dev/null
 
   # ---------- fio 随机读写 ----------
+  need_tool fio >/dev/null 2>&1 || true
   if have fio; then
     local size secs
-    if [ "$FAST_MODE" = "1" ]; then size="256M"; secs=8; else size="512M"; secs=15; fi
+    if [ "$FAST_MODE" = "1" ]; then size="256M"; secs=8; else size="512M"; secs=10; fi
     local bsl="4k 64k 512k 1m"
     for bs in $bsl; do
       inline "fio 混合随机读写 ${bs} ..."

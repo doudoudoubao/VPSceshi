@@ -86,17 +86,19 @@ st_run() {
 }
 
 # 节点表：显示名 | 搜索关键词 | 备用ID
+# 默认只跑前 6 个（三网各 2 个，南北各一），够看出线路差异了。
+# 想全跑用 --speedtest-full；每个节点约 100-500MB 流量，别浪费。
 _st_nodes_cn() {
   cat <<'EOF'
 上海电信|China Telecom Shanghai|3633
 上海联通|China Unicom Shanghai|24447
 上海移动|China Mobile Shanghai|25858
-北京电信|China Telecom Beijing|27377
-北京联通|China Unicom Beijing|5145
-北京移动|China Mobile Beijing|41839
 广州电信|China Telecom Guangdong|27594
 广州联通|China Unicom Guangzhou|26678
 广州移动|China Mobile Guangdong|31490
+北京电信|China Telecom Beijing|27377
+北京联通|China Unicom Beijing|5145
+北京移动|China Mobile Beijing|41839
 成都电信|China Telecom Chengdu|17320
 EOF
 }
@@ -178,8 +180,10 @@ test_speedtest() {
     inline_done "失败"
   fi
 
-  local limit=0
+  # 默认 6 个节点，--fast 只跑 3 个，--speedtest-full 才全跑
+  local limit=6
   [ "$FAST_MODE" = "1" ] && limit=3
+  [ "$SPEEDTEST_FULL" = "1" ] && limit=0
 
   case "$SPEEDTEST_MODE" in
     cn)     _run_node_list speed_cn "$(_st_nodes_cn)" "$limit" ;;

@@ -9,8 +9,8 @@ VPSTEST_REPO="https://github.com/doudoudoubao/VPSceshi"
 
 # ---------- 运行时参数（可被命令行覆盖） ----------
 OUT_DIR="${OUT_DIR:-$PWD/vpstest-result}"
-CURL_TIMEOUT="${CURL_TIMEOUT:-10}"
-CURL_CONNECT="${CURL_CONNECT:-5}"
+CURL_TIMEOUT="${CURL_TIMEOUT:-8}"
+CURL_CONNECT="${CURL_CONNECT:-4}"
 USE_COLOR=1
 QUIET=0
 NODE_NAME=""          # 机器名，用于报告标题
@@ -18,6 +18,8 @@ ONLY_MODULES=""       # 逗号分隔白名单
 SKIP_MODULES=""       # 逗号分隔黑名单
 ENABLE_GEEKBENCH=0
 ENABLE_IPERF=0
+SPEEDTEST_FULL=0   # 测速跑满 10 个节点
+ROUTE_FULL=0       # 回程路由跑满 10 个目标
 ENABLE_UPLOAD=0
 FAST_MODE=0
 SPEEDTEST_MODE="cn"   # cn | global | all | off
@@ -47,11 +49,18 @@ log_warn() { [ "$QUIET" = "1" ] && return 0; printf '%s[!]%s %s\n' "$C_Y" "$C_RS
 log_err()  { printf '%s[x]%s %s\n' "$C_R" "$C_RST" "$*" >&2; }
 
 STEP_NO=0
+RUN_T0=0     # 由 main 设置的开跑时间戳
 step() {
   STEP_NO=$((STEP_NO + 1))
   [ "$QUIET" = "1" ] && return 0
-  printf '\n%s%s━━━ [%02d] %s ━━━━━━━━━━━━━━━━━━━━%s\n' \
-    "$C_B" "$C_BL" "$STEP_NO" "$*" "$C_RST"
+  # 带上累计耗时，卡住时一眼看出卡了多久
+  local el=""
+  if [ "$RUN_T0" -gt 0 ]; then
+    local s=$(( $(date +%s) - RUN_T0 ))
+    el="$(printf ' %s[+%d:%02d]%s' "$C_DIM" $((s/60)) $((s%60)) "$C_RST")"
+  fi
+  printf '\n%s%s━━━ [%02d] %s%s %s━━━━━━━━━━%s\n' \
+    "$C_B" "$C_BL" "$STEP_NO" "$*" "$el" "$C_BL" "$C_RST"
 }
 
 # ---------- 结果存储 ----------
@@ -107,12 +116,18 @@ sect_show() { rows_have "$1" || na_has "$1"; }
 have() { command -v "$1" >/dev/null 2>&1; }
 
 # 带超时执行，失败不影响主流程（丢弃 stderr）
+#
+# stdin 一律接 /dev/null：脚本常以 bash <(curl ...) 方式运行，
+# 此时 stdin 还连着终端。子进程（尤其 apt 的维护脚本）一旦去读
+# stdin 就会永久阻塞，而 timeout 只杀得掉直接子进程，孙子进程
+# 仍占着终端——表现就是整个脚本卡死不动。接 /dev/null 后任何
+# 读取立刻拿到 EOF，不会卡住。
 run_to() {
   local sec="$1"; shift
   if have timeout; then
-    timeout --signal=KILL "$sec" "$@" 2>/dev/null
+    timeout --signal=KILL "$sec" "$@" </dev/null 2>/dev/null
   else
-    "$@" 2>/dev/null
+    "$@" </dev/null 2>/dev/null
   fi
 }
 
@@ -121,9 +136,9 @@ run_to() {
 run_to2() {
   local sec="$1"; shift
   if have timeout; then
-    timeout --signal=KILL "$sec" "$@" 2>&1
+    timeout --signal=KILL "$sec" "$@" </dev/null 2>&1
   else
-    "$@" 2>&1
+    "$@" </dev/null 2>&1
   fi
 }
 

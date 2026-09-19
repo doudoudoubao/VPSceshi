@@ -44,14 +44,14 @@ EOF
 _trace_one() {
   local ip="$1" out
   if [ -n "$NT_BIN" ]; then
-    out="$(run_to 90 "$NT_BIN" -M -q 1 -n --map=false "$ip" 2>/dev/null)"
-    [ -z "$out" ] && out="$(run_to 90 "$NT_BIN" -q 1 "$ip" 2>/dev/null)"
+    out="$(run_to 35 "$NT_BIN" -M -q 1 -n --map=false "$ip" 2>/dev/null)"
+    [ -z "$out" ] && out="$(run_to 35 "$NT_BIN" -q 1 "$ip" 2>/dev/null)"
   elif have mtr; then
-    out="$(run_to 90 mtr -r -c 3 -n "$ip" 2>/dev/null)"
+    out="$(run_to 35 mtr -r -c 3 -n "$ip" 2>/dev/null)"
   elif have traceroute; then
-    out="$(run_to 90 traceroute -q 1 -w 2 -m 20 "$ip" 2>/dev/null)"
+    out="$(run_to 35 traceroute -q 1 -w 1 -m 20 "$ip" 2>/dev/null)"
   elif have tracepath; then
-    out="$(run_to 90 tracepath -m 20 "$ip" 2>/dev/null)"
+    out="$(run_to 35 tracepath -m 20 "$ip" 2>/dev/null)"
   fi
   printf '%s' "$out"
 }
@@ -107,7 +107,11 @@ test_route() {
   while IFS='|' read -r label ip; do
     [ -z "$label" ] && continue
     n=$((n + 1))
-    [ "$FAST_MODE" = "1" ] && [ "$n" -gt 3 ] && break
+    # 默认 6 个（三网各 2），--fast 3 个，--route-full 全部 10 个
+    local rlimit=6
+    [ "$FAST_MODE" = "1" ] && rlimit=3
+    [ "$ROUTE_FULL" = "1" ] && rlimit=99
+    [ "$n" -gt "$rlimit" ] && break
     inline "$label ($ip) ..."
     out="$(_trace_one "$ip")"
     if [ -n "$out" ]; then

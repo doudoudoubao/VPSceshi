@@ -8,12 +8,12 @@ UA_UNLOCK="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 
 # 当前检测使用的协议栈：4 或 6
 UL_STACK=4
 ucurl() {
-  curl -sS -"$UL_STACK" --connect-timeout 6 --max-time 14 \
+  curl -sS -"$UL_STACK" --connect-timeout 4 --max-time 7 \
     -A "$UA_UNLOCK" "$@" 2>/dev/null
 }
 ucode() { # 只取 HTTP 状态码
   curl -sS -"$UL_STACK" -o /dev/null -w '%{http_code}' \
-    --connect-timeout 6 --max-time 14 -A "$UA_UNLOCK" "$@" 2>/dev/null
+    --connect-timeout 4 --max-time 7 -A "$UA_UNLOCK" "$@" 2>/dev/null
 }
 
 OK="✅ 解锁"

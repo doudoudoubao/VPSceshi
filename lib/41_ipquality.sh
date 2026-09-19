@@ -156,6 +156,7 @@ test_ipquality() {
   [ -n "$(kv_get nq.rir)" ]       && row_add ipq_native "注册局 RIR" "$(kv_get nq.rir)"
 
   # ---------- 5. 邮件黑名单 ----------
+  need_tool dig >/dev/null 2>&1 || true
   # 分两档：主流黑名单命中影响大（黑名单），次级库命中记为「已标记」
   inline "DNSBL 黑名单检测 ..."
   local rbls_major=(

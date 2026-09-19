@@ -54,7 +54,7 @@ test_mtr() {
     n=$((n + 1))
     [ "$FAST_MODE" = "1" ] && [ "$n" -gt 1 ] && break
     inline "$label ($ip) ..."
-    out="$(run_to 120 mtr --report --report-cycles=10 -n "$ip" 2>/dev/null)"
+    out="$(run_to 60 mtr --report --report-cycles=5 -n "$ip" 2>/dev/null)"
     if [ -z "$out" ]; then
       inline_done "失败"
       row_add mtr_out "$label" "$ip" "N/A" "N/A" "N/A" "N/A"

@@ -8,7 +8,7 @@
 # 一键运行：
 #   bash <(curl -sL https://github.com/doudoudoubao/VPSceshi/raw/main/dist/vpstest.sh)
 #
-# 生成时间： 2026-09-19 15:55:14 UTC
+# 生成时间： 2026-09-19 16:02:46 UTC
 # ============================================================
 
 set -o pipefail
@@ -24,8 +24,8 @@ VPSTEST_REPO="https://github.com/doudoudoubao/VPSceshi"
 
 # ---------- 运行时参数（可被命令行覆盖） ----------
 OUT_DIR="${OUT_DIR:-$PWD/vpstest-result}"
-CURL_TIMEOUT="${CURL_TIMEOUT:-10}"
-CURL_CONNECT="${CURL_CONNECT:-5}"
+CURL_TIMEOUT="${CURL_TIMEOUT:-8}"
+CURL_CONNECT="${CURL_CONNECT:-4}"
 USE_COLOR=1
 QUIET=0
 NODE_NAME=""          # 机器名，用于报告标题
@@ -33,6 +33,8 @@ ONLY_MODULES=""       # 逗号分隔白名单
 SKIP_MODULES=""       # 逗号分隔黑名单
 ENABLE_GEEKBENCH=0
 ENABLE_IPERF=0
+SPEEDTEST_FULL=0   # 测速跑满 10 个节点
+ROUTE_FULL=0       # 回程路由跑满 10 个目标
 ENABLE_UPLOAD=0
 FAST_MODE=0
 SPEEDTEST_MODE="cn"   # cn | global | all | off
@@ -62,11 +64,18 @@ log_warn() { [ "$QUIET" = "1" ] && return 0; printf '%s[!]%s %s\n' "$C_Y" "$C_RS
 log_err()  { printf '%s[x]%s %s\n' "$C_R" "$C_RST" "$*" >&2; }
 
 STEP_NO=0
+RUN_T0=0     # 由 main 设置的开跑时间戳
 step() {
   STEP_NO=$((STEP_NO + 1))
   [ "$QUIET" = "1" ] && return 0
-  printf '\n%s%s━━━ [%02d] %s ━━━━━━━━━━━━━━━━━━━━%s\n' \
-    "$C_B" "$C_BL" "$STEP_NO" "$*" "$C_RST"
+  # 带上累计耗时，卡住时一眼看出卡了多久
+  local el=""
+  if [ "$RUN_T0" -gt 0 ]; then
+    local s=$(( $(date +%s) - RUN_T0 ))
+    el="$(printf ' %s[+%d:%02d]%s' "$C_DIM" $((s/60)) $((s%60)) "$C_RST")"
+  fi
+  printf '\n%s%s━━━ [%02d] %s%s %s━━━━━━━━━━%s\n' \
+    "$C_B" "$C_BL" "$STEP_NO" "$*" "$el" "$C_BL" "$C_RST"
 }
 
 # ---------- 结果存储 ----------
@@ -122,12 +131,18 @@ sect_show() { rows_have "$1" || na_has "$1"; }
 have() { command -v "$1" >/dev/null 2>&1; }
 
 # 带超时执行，失败不影响主流程（丢弃 stderr）
+#
+# stdin 一律接 /dev/null：脚本常以 bash <(curl ...) 方式运行，
+# 此时 stdin 还连着终端。子进程（尤其 apt 的维护脚本）一旦去读
+# stdin 就会永久阻塞，而 timeout 只杀得掉直接子进程，孙子进程
+# 仍占着终端——表现就是整个脚本卡死不动。接 /dev/null 后任何
+# 读取立刻拿到 EOF，不会卡住。
 run_to() {
   local sec="$1"; shift
   if have timeout; then
-    timeout --signal=KILL "$sec" "$@" 2>/dev/null
+    timeout --signal=KILL "$sec" "$@" </dev/null 2>/dev/null
   else
-    "$@" 2>/dev/null
+    "$@" </dev/null 2>/dev/null
   fi
 }
 
@@ -136,9 +151,9 @@ run_to() {
 run_to2() {
   local sec="$1"; shift
   if have timeout; then
-    timeout --signal=KILL "$sec" "$@" 2>&1
+    timeout --signal=KILL "$sec" "$@" </dev/null 2>&1
   else
-    "$@" 2>&1
+    "$@" </dev/null 2>&1
   fi
 }
 
@@ -548,9 +563,17 @@ ensure_ping() {
   esac
 }
 
+# need_tool <命令> [包名]
+# 模块用到某个工具时才现装，装不上就返回 1 让调用方走降级。
+# 好处：不必在开跑前干等一堆包，而且只装当前这次真正用得到的。
+need_tool() {
+  have "$1" && return 0
+  ensure_cmd "$@"
+}
+
 DEPS_REPORT=""
 install_deps() {
-  step "检测并安装依赖"
+  step "检测依赖"
   detect_pkg_mgr
   if [ -z "$PKG_MGR" ]; then
     log_warn "未识别包管理器，仅使用系统自带工具运行"
@@ -558,28 +581,28 @@ install_deps() {
     log_info "包管理器: $PKG_MGR"
   fi
   if [ "$(id -u)" != "0" ]; then
-    log_warn "非 root 运行，无法自动安装依赖，部分测试可能降级或跳过"
+    log_warn "非 root 运行，无法自动安装依赖，部分测试会降级或跳过"
+    SKIP_DEPS=1
   fi
 
   if [ "$SKIP_DEPS" = "1" ]; then
-    log_info "已指定 --no-deps，跳过依赖安装，只用系统现有工具"
-  elif [ -n "$PKG_MGR" ] && [ "$(id -u)" = "0" ]; then
-    # 拿不到包管理器就别装了，硬等只会让脚本看起来死掉
+    [ "$(id -u)" = "0" ] && log_info "已指定 --no-deps，只用系统现有工具"
+  elif [ -n "$PKG_MGR" ]; then
+    # 锁被占着就别装了，硬等只会让脚本看起来死掉
     _wait_pkg_lock || SKIP_DEPS=1
     DEP_DEADLINE=$(( $(date +%s) + DEP_BUDGET ))
   fi
 
-  local base=(curl wget tar gzip)
-  local opt=(bc jq sysbench fio unzip)
-  local c
-  for c in "${base[@]}"; do
-    if ensure_cmd "$c"; then :; else log_warn "缺少基础工具: $c"; fi
-  done
-  ensure_ping || log_warn "缺少 ping，延迟测试将跳过"
-  ensure_cmd dig  >/dev/null 2>&1 || true
-  for c in "${opt[@]}"; do
-    ensure_cmd "$c" >/dev/null 2>&1 || true
-  done
+  # 只有 curl 是真·必需（下载 speedtest/nexttrace、所有解锁检测都靠它）。
+  # 其余按模块需要在各自用到时现装，不在这里堵着。
+  if ! have curl; then
+    ensure_cmd curl || log_err "缺少 curl，联网相关测试将全部无法进行"
+  fi
+  have wget || ensure_cmd wget >/dev/null 2>&1 || true
+
+  # bc 和 jq 影响所有数值解析，值得提前装，但装不上也有退路
+  have bc || ensure_cmd bc >/dev/null 2>&1 || true
+  have jq || ensure_cmd jq >/dev/null 2>&1 || true
 
   local ok=() miss=()
   for c in curl wget bc jq sysbench fio ping dig tar; do
@@ -817,6 +840,7 @@ test_cpu() {
   cores="$(kv_get sys.cpu.cores)"; [ -z "$cores" ] && cores=1
   secs=10; [ "$FAST_MODE" = "1" ] && secs=5
 
+  need_tool sysbench >/dev/null 2>&1 || true
   if have sysbench; then
     inline "sysbench 单核 (${secs}s) ..."
     local s1; s1="$(_sysbench_cpu 1 "$secs")"
@@ -963,6 +987,7 @@ test_memory() {
     skip_note "$SKIP_REASON_OPT" memory; return 0; }
   step "内存性能测试"
 
+  need_tool sysbench >/dev/null 2>&1 || true
   if have sysbench; then
     inline "sysbench 内存顺序读 ..."
     local r; r="$(_sysbench_mem read)"
@@ -1029,10 +1054,10 @@ _dd_write() {
   local bs="$1" count="$2" f="$DISK_WORKDIR/.vpstest_dd"
   local o
   # dd 把速度统计写在 stderr，必须用 run_to2 合并过来
-  o="$(run_to2 180 dd if=/dev/zero of="$f" bs="$bs" count="$count" oflag=direct conv=fsync)"
+  o="$(run_to2 90 dd if=/dev/zero of="$f" bs="$bs" count="$count" oflag=direct conv=fsync)"
   if ! printf '%s' "$o" | grep -qE 'copied|bytes'; then
     # 部分文件系统 / 容器不支持 O_DIRECT，退回普通写入
-    o="$(run_to2 180 dd if=/dev/zero of="$f" bs="$bs" count="$count" conv=fsync)"
+    o="$(run_to2 90 dd if=/dev/zero of="$f" bs="$bs" count="$count" conv=fsync)"
   fi
   printf '%s' "$o" | grep -Eo '[0-9.]+ [KMG]?B/s' | tail -1
 }
@@ -1043,9 +1068,9 @@ _dd_read() {
   sync 2>/dev/null
   [ -w /proc/sys/vm/drop_caches ] && echo 3 > /proc/sys/vm/drop_caches 2>/dev/null
   local o
-  o="$(run_to2 180 dd if="$f" of=/dev/null bs="$bs" count="$count" iflag=direct)"
+  o="$(run_to2 90 dd if="$f" of=/dev/null bs="$bs" count="$count" iflag=direct)"
   if ! printf '%s' "$o" | grep -qE 'copied|bytes'; then
-    o="$(run_to2 180 dd if="$f" of=/dev/null bs="$bs" count="$count")"
+    o="$(run_to2 90 dd if="$f" of=/dev/null bs="$bs" count="$count")"
   fi
   printf '%s' "$o" | grep -Eo '[0-9.]+ [KMG]?B/s' | tail -1
 }
@@ -1118,7 +1143,7 @@ test_disk() {
   if [ "$FAST_MODE" = "1" ]; then
     specs="1M:512 128K:2000"
   else
-    specs="1M:1000 1M:1000 128K:8000"
+    specs="1M:1000 128K:8000"
   fi
   local i=0 sum_w=0 n_w=0
   for s in $specs; do
@@ -1143,9 +1168,10 @@ test_disk() {
   rm -f "$DISK_WORKDIR/.vpstest_dd" 2>/dev/null
 
   # ---------- fio 随机读写 ----------
+  need_tool fio >/dev/null 2>&1 || true
   if have fio; then
     local size secs
-    if [ "$FAST_MODE" = "1" ]; then size="256M"; secs=8; else size="512M"; secs=15; fi
+    if [ "$FAST_MODE" = "1" ]; then size="256M"; secs=8; else size="512M"; secs=10; fi
     local bsl="4k 64k 512k 1m"
     for bs in $bsl; do
       inline "fio 混合随机读写 ${bs} ..."
@@ -1418,6 +1444,7 @@ test_ipquality() {
   [ -n "$(kv_get nq.rir)" ]       && row_add ipq_native "注册局 RIR" "$(kv_get nq.rir)"
 
   # ---------- 5. 邮件黑名单 ----------
+  need_tool dig >/dev/null 2>&1 || true
   # 分两档：主流黑名单命中影响大（黑名单），次级库命中记为「已标记」
   inline "DNSBL 黑名单检测 ..."
   local rbls_major=(
@@ -1667,12 +1694,12 @@ UA_UNLOCK="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 
 # 当前检测使用的协议栈：4 或 6
 UL_STACK=4
 ucurl() {
-  curl -sS -"$UL_STACK" --connect-timeout 6 --max-time 14 \
+  curl -sS -"$UL_STACK" --connect-timeout 4 --max-time 7 \
     -A "$UA_UNLOCK" "$@" 2>/dev/null
 }
 ucode() { # 只取 HTTP 状态码
   curl -sS -"$UL_STACK" -o /dev/null -w '%{http_code}' \
-    --connect-timeout 6 --max-time 14 -A "$UA_UNLOCK" "$@" 2>/dev/null
+    --connect-timeout 4 --max-time 7 -A "$UA_UNLOCK" "$@" 2>/dev/null
 }
 
 OK="✅ 解锁"
@@ -2291,17 +2318,19 @@ st_run() {
 }
 
 # 节点表：显示名 | 搜索关键词 | 备用ID
+# 默认只跑前 6 个（三网各 2 个，南北各一），够看出线路差异了。
+# 想全跑用 --speedtest-full；每个节点约 100-500MB 流量，别浪费。
 _st_nodes_cn() {
   cat <<'EOF'
 上海电信|China Telecom Shanghai|3633
 上海联通|China Unicom Shanghai|24447
 上海移动|China Mobile Shanghai|25858
-北京电信|China Telecom Beijing|27377
-北京联通|China Unicom Beijing|5145
-北京移动|China Mobile Beijing|41839
 广州电信|China Telecom Guangdong|27594
 广州联通|China Unicom Guangzhou|26678
 广州移动|China Mobile Guangdong|31490
+北京电信|China Telecom Beijing|27377
+北京联通|China Unicom Beijing|5145
+北京移动|China Mobile Beijing|41839
 成都电信|China Telecom Chengdu|17320
 EOF
 }
@@ -2383,8 +2412,10 @@ test_speedtest() {
     inline_done "失败"
   fi
 
-  local limit=0
+  # 默认 6 个节点，--fast 只跑 3 个，--speedtest-full 才全跑
+  local limit=6
   [ "$FAST_MODE" = "1" ] && limit=3
+  [ "$SPEEDTEST_FULL" = "1" ] && limit=0
 
   case "$SPEEDTEST_MODE" in
     cn)     _run_node_list speed_cn "$(_st_nodes_cn)" "$limit" ;;
@@ -2434,17 +2465,15 @@ _ping_targets_global() {
 韩国 首尔|168.126.63.1|亚太
 台湾 台北|168.95.1.1|亚太
 美国 洛杉矶|4.2.2.1|美洲
-美国 圣何塞|208.67.222.222|美洲
 德国 法兰克福|194.25.0.60|欧洲
-英国 伦敦|8.8.8.8|欧洲
 EOF
 }
 
 # _ping_one <ip> -> "avg|loss"
 _ping_one() {
   local ip="$1" cnt="${2:-5}" out avg loss
-  out="$(run_to $((cnt * 2 + 8)) ping -c "$cnt" -W 2 -i 0.3 "$ip" 2>/dev/null)"
-  [ -z "$out" ] && out="$(run_to $((cnt * 2 + 8)) ping -c "$cnt" -W 2 "$ip" 2>/dev/null)"
+  out="$(run_to $((cnt + 6)) ping -c "$cnt" -W 1 -i 0.25 "$ip" 2>/dev/null)"
+  [ -z "$out" ] && out="$(run_to $((cnt + 6)) ping -c "$cnt" -W 1 "$ip" 2>/dev/null)"
   [ -z "$out" ] && return 1
   loss="$(printf '%s' "$out" | grep -oE '[0-9.]+% packet loss' | grep -oE '^[0-9.]+')"
   avg="$(printf '%s' "$out" | grep -E 'min/avg|round-trip' | awk -F'/' '{print $5}')"
@@ -2462,7 +2491,7 @@ _run_ping_list() {
   while IFS='|' read -r label ip grp; do
     [ -z "$label" ] && continue
     inline "$label ($ip) ..."
-    res="$(_ping_one "$ip" 5)"
+    res="$(_ping_one "$ip" 4)"
     if [ -n "$res" ]; then
       IFS='|' read -r avg loss <<< "$res"
       if [ -n "$avg" ]; then
@@ -2484,6 +2513,7 @@ _run_ping_list() {
 test_ping() {
   module_enabled ping || { log_info "跳过延迟测试"
     skip_note "$SKIP_REASON_OPT" ping_cn ping_gl; return 0; }
+  need_tool ping >/dev/null 2>&1 || true
   if ! have ping; then
     log_warn "系统缺少 ping 命令，跳过延迟测试"
     return 0
@@ -2546,14 +2576,14 @@ EOF
 _trace_one() {
   local ip="$1" out
   if [ -n "$NT_BIN" ]; then
-    out="$(run_to 90 "$NT_BIN" -M -q 1 -n --map=false "$ip" 2>/dev/null)"
-    [ -z "$out" ] && out="$(run_to 90 "$NT_BIN" -q 1 "$ip" 2>/dev/null)"
+    out="$(run_to 35 "$NT_BIN" -M -q 1 -n --map=false "$ip" 2>/dev/null)"
+    [ -z "$out" ] && out="$(run_to 35 "$NT_BIN" -q 1 "$ip" 2>/dev/null)"
   elif have mtr; then
-    out="$(run_to 90 mtr -r -c 3 -n "$ip" 2>/dev/null)"
+    out="$(run_to 35 mtr -r -c 3 -n "$ip" 2>/dev/null)"
   elif have traceroute; then
-    out="$(run_to 90 traceroute -q 1 -w 2 -m 20 "$ip" 2>/dev/null)"
+    out="$(run_to 35 traceroute -q 1 -w 1 -m 20 "$ip" 2>/dev/null)"
   elif have tracepath; then
-    out="$(run_to 90 tracepath -m 20 "$ip" 2>/dev/null)"
+    out="$(run_to 35 tracepath -m 20 "$ip" 2>/dev/null)"
   fi
   printf '%s' "$out"
 }
@@ -2609,7 +2639,11 @@ test_route() {
   while IFS='|' read -r label ip; do
     [ -z "$label" ] && continue
     n=$((n + 1))
-    [ "$FAST_MODE" = "1" ] && [ "$n" -gt 3 ] && break
+    # 默认 6 个（三网各 2），--fast 3 个，--route-full 全部 10 个
+    local rlimit=6
+    [ "$FAST_MODE" = "1" ] && rlimit=3
+    [ "$ROUTE_FULL" = "1" ] && rlimit=99
+    [ "$n" -gt "$rlimit" ] && break
     inline "$label ($ip) ..."
     out="$(_trace_one "$ip")"
     if [ -n "$out" ]; then
@@ -2878,7 +2912,7 @@ test_mtr() {
     n=$((n + 1))
     [ "$FAST_MODE" = "1" ] && [ "$n" -gt 1 ] && break
     inline "$label ($ip) ..."
-    out="$(run_to 120 mtr --report --report-cycles=10 -n "$ip" 2>/dev/null)"
+    out="$(run_to 60 mtr --report --report-cycles=5 -n "$ip" 2>/dev/null)"
     if [ -z "$out" ]; then
       inline_done "失败"
       row_add mtr_out "$label" "$ip" "N/A" "N/A" "N/A" "N/A"
@@ -4932,6 +4966,8 @@ ${VPSTEST_NAME} v${VPSTEST_VERSION} — VPS / 服务器一键全能测评
       --iperf             启用国际节点 iperf3 带宽测试
       --ns-no-tabs        NodeSeek 版不用标签页容器，退化成普通标题
       --no-deps           不自动安装依赖，只用系统现有工具（apt 被占用时用）
+      --speedtest-full    测速跑满 10 个节点（默认 6 个，省时间和流量）
+      --route-full        回程路由跑满 10 个目标（默认 6 个）
       --show-ip           报告中显示完整出口 IP（默认部分遮蔽）
       --no-color          关闭彩色输出
   -q, --quiet             安静模式，只输出最终结果路径
@@ -4984,12 +5020,14 @@ parse_args() {
       -s|--skip)      SKIP_MODULES="$2"; shift 2 ;;
       --fast)         FAST_MODE=1; shift ;;
       --full)         FAST_MODE=0; ENABLE_GEEKBENCH=1; ENABLE_IPERF=1
-                      SPEEDTEST_MODE="all"; shift ;;
+                      SPEEDTEST_MODE="all"; SPEEDTEST_FULL=1; ROUTE_FULL=1; shift ;;
       --speedtest)    SPEEDTEST_MODE="$2"; shift 2 ;;
       --geekbench)    ENABLE_GEEKBENCH=1; shift ;;
       --iperf)        ENABLE_IPERF=1; shift ;;
       --ns-no-tabs)   NS_USE_TABS=0; shift ;;
       --no-deps)      SKIP_DEPS=1; shift ;;
+      --speedtest-full) SPEEDTEST_FULL=1; shift ;;
+      --route-full)   ROUTE_FULL=1; shift ;;
       --show-ip)      MASK_IP=0; shift ;;
       # —— 配置核对 ——
       -c|--config)    load_profile_file "$2" || exit 1; shift 2 ;;
@@ -5134,6 +5172,7 @@ main() {
 
   trap cleanup EXIT INT TERM
   local t_start; t_start="$(date +%s)"
+  RUN_T0="$t_start"
 
   setup_bin_dir
   install_deps

@@ -27,17 +27,15 @@ _ping_targets_global() {
 韩国 首尔|168.126.63.1|亚太
 台湾 台北|168.95.1.1|亚太
 美国 洛杉矶|4.2.2.1|美洲
-美国 圣何塞|208.67.222.222|美洲
 德国 法兰克福|194.25.0.60|欧洲
-英国 伦敦|8.8.8.8|欧洲
 EOF
 }
 
 # _ping_one <ip> -> "avg|loss"
 _ping_one() {
   local ip="$1" cnt="${2:-5}" out avg loss
-  out="$(run_to $((cnt * 2 + 8)) ping -c "$cnt" -W 2 -i 0.3 "$ip" 2>/dev/null)"
-  [ -z "$out" ] && out="$(run_to $((cnt * 2 + 8)) ping -c "$cnt" -W 2 "$ip" 2>/dev/null)"
+  out="$(run_to $((cnt + 6)) ping -c "$cnt" -W 1 -i 0.25 "$ip" 2>/dev/null)"
+  [ -z "$out" ] && out="$(run_to $((cnt + 6)) ping -c "$cnt" -W 1 "$ip" 2>/dev/null)"
   [ -z "$out" ] && return 1
   loss="$(printf '%s' "$out" | grep -oE '[0-9.]+% packet loss' | grep -oE '^[0-9.]+')"
   avg="$(printf '%s' "$out" | grep -E 'min/avg|round-trip' | awk -F'/' '{print $5}')"
@@ -55,7 +53,7 @@ _run_ping_list() {
   while IFS='|' read -r label ip grp; do
     [ -z "$label" ] && continue
     inline "$label ($ip) ..."
-    res="$(_ping_one "$ip" 5)"
+    res="$(_ping_one "$ip" 4)"
     if [ -n "$res" ]; then
       IFS='|' read -r avg loss <<< "$res"
       if [ -n "$avg" ]; then
@@ -77,6 +75,7 @@ _run_ping_list() {
 test_ping() {
   module_enabled ping || { log_info "跳过延迟测试"
     skip_note "$SKIP_REASON_OPT" ping_cn ping_gl; return 0; }
+  need_tool ping >/dev/null 2>&1 || true
   if ! have ping; then
     log_warn "系统缺少 ping 命令，跳过延迟测试"
     return 0

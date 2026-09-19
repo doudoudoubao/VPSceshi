@@ -134,9 +134,17 @@ ensure_ping() {
   esac
 }
 
+# need_tool <命令> [包名]
+# 模块用到某个工具时才现装，装不上就返回 1 让调用方走降级。
+# 好处：不必在开跑前干等一堆包，而且只装当前这次真正用得到的。
+need_tool() {
+  have "$1" && return 0
+  ensure_cmd "$@"
+}
+
 DEPS_REPORT=""
 install_deps() {
-  step "检测并安装依赖"
+  step "检测依赖"
   detect_pkg_mgr
   if [ -z "$PKG_MGR" ]; then
     log_warn "未识别包管理器，仅使用系统自带工具运行"
@@ -144,28 +152,28 @@ install_deps() {
     log_info "包管理器: $PKG_MGR"
   fi
   if [ "$(id -u)" != "0" ]; then
-    log_warn "非 root 运行，无法自动安装依赖，部分测试可能降级或跳过"
+    log_warn "非 root 运行，无法自动安装依赖，部分测试会降级或跳过"
+    SKIP_DEPS=1
   fi
 
   if [ "$SKIP_DEPS" = "1" ]; then
-    log_info "已指定 --no-deps，跳过依赖安装，只用系统现有工具"
-  elif [ -n "$PKG_MGR" ] && [ "$(id -u)" = "0" ]; then
-    # 拿不到包管理器就别装了，硬等只会让脚本看起来死掉
+    [ "$(id -u)" = "0" ] && log_info "已指定 --no-deps，只用系统现有工具"
+  elif [ -n "$PKG_MGR" ]; then
+    # 锁被占着就别装了，硬等只会让脚本看起来死掉
     _wait_pkg_lock || SKIP_DEPS=1
     DEP_DEADLINE=$(( $(date +%s) + DEP_BUDGET ))
   fi
 
-  local base=(curl wget tar gzip)
-  local opt=(bc jq sysbench fio unzip)
-  local c
-  for c in "${base[@]}"; do
-    if ensure_cmd "$c"; then :; else log_warn "缺少基础工具: $c"; fi
-  done
-  ensure_ping || log_warn "缺少 ping，延迟测试将跳过"
-  ensure_cmd dig  >/dev/null 2>&1 || true
-  for c in "${opt[@]}"; do
-    ensure_cmd "$c" >/dev/null 2>&1 || true
-  done
+  # 只有 curl 是真·必需（下载 speedtest/nexttrace、所有解锁检测都靠它）。
+  # 其余按模块需要在各自用到时现装，不在这里堵着。
+  if ! have curl; then
+    ensure_cmd curl || log_err "缺少 curl，联网相关测试将全部无法进行"
+  fi
+  have wget || ensure_cmd wget >/dev/null 2>&1 || true
+
+  # bc 和 jq 影响所有数值解析，值得提前装，但装不上也有退路
+  have bc || ensure_cmd bc >/dev/null 2>&1 || true
+  have jq || ensure_cmd jq >/dev/null 2>&1 || true
 
   local ok=() miss=()
   for c in curl wget bc jq sysbench fio ping dig tar; do

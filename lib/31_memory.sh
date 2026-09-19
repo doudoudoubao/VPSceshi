@@ -17,6 +17,7 @@ test_memory() {
     skip_note "$SKIP_REASON_OPT" memory; return 0; }
   step "内存性能测试"
 
+  need_tool sysbench >/dev/null 2>&1 || true
   if have sysbench; then
     inline "sysbench 内存顺序读 ..."
     local r; r="$(_sysbench_mem read)"
