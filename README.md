@@ -37,7 +37,28 @@ cd VPSceshi && bash vpstest.sh -n "我的小鸡"
 | `report-*.json` | 机器可读，方便二次处理 / 入库 / 做对比 |
 | `report-*.txt` | 纯文本，贴哪都不会乱 |
 
-同时会写一份 `latest.*` 方便脚本取用。发帖直接 `cat vpstest-result/latest.nodeseek.md` 全选复制即可。
+同时会写一份 `latest.*` 方便脚本取用。
+
+### 不想回服务器复制？加 `--upload`
+
+HTML 报告顶部自带**一键复制**按钮条（NodeSeek / Markdown / BBCode / 纯文本 / JSON
+各一个，点一下整份进剪贴板）。加上 `--upload` 会把这个页面传到公网，跑完直接给你一个链接：
+
+```bash
+bash vpstest.sh -n "我的小鸡" --upload
+```
+
+```
+在线报告（打开就能一键复制各种格式）:
+  https://files.catbox.moe/xxxxxx.html
+```
+
+手机上打开链接，点「NodeSeek 排版」，直接去发帖框粘贴即可。
+
+> ⚠️ **上传等于公开发布**：链接任何人拿到都能打开。而且第十二章的路由原始输出里
+> 通常带着本机首跳/网关的**真实 IP**，摘要里对出口 IP 的遮蔽对它无效。
+> 所以这是显式开关，不加 `--upload` 绝不会往外传任何东西。
+> 介意的话可以配合 `--skip route,mtr` 把原始路由排除掉再传。
 
 📄 **示例报告**：[Markdown](docs/sample-report.md) ·
 [NodeSeek](docs/sample-report.nodeseek.md) ·

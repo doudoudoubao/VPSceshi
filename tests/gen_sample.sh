@@ -331,12 +331,14 @@ calc_score >/dev/null 2>&1
 build_verdict >/dev/null 2>&1
 
 mkdir -p "$OUT"
+# HTML 最后生成：要把其它格式嵌进去做一键复制
 gen_markdown > "$OUT/sample-report.md"
 gen_nodeseek > "$OUT/sample-report.nodeseek.md"
 gen_bbcode   > "$OUT/sample-report.bbcode"
-gen_html     > "$OUT/sample-report.html"
 gen_json     > "$OUT/sample-report.json"
 gen_txt      > "$OUT/sample-report.txt"
+HTML_EMBED_BASE="$OUT/sample-report"
+gen_html     > "$OUT/sample-report.html"
 
 echo "[+] 样例报告已生成到: $OUT"
 for e in md nodeseek.md bbcode html json txt; do
@@ -381,6 +383,10 @@ check "MD 摘要含回程线路"   "grep -q '回程线路.*CN2 GIA' '$OUT/sample
 check "MD 摘要含解锁通过率" "grep -q '解锁通过率' '$OUT/sample-report.md'"
 check "HTML 有摘要条"       "grep -q 'class=\"summary\"' '$OUT/sample-report.html'"
 check "HTML 有目录"         "grep -q 'class=\"toc\"' '$OUT/sample-report.html'"
+check "HTML 有复制按钮条"   "grep -q 'class=\"copybar\"' '$OUT/sample-report.html'"
+check "HTML 嵌入 5 种格式"  "[ \$(grep -o 'id=\"fmt-[a-z]*\"' '$OUT/sample-report.html' | sort -u | wc -l) -eq 5 ]"
+check "HTML script 标签配对" "[ \$(grep -c '<script' '$OUT/sample-report.html') -eq \$(grep -c '</script>' '$OUT/sample-report.html') ]"
+check "复制有非安全上下文回退" "grep -q 'execCommand' '$OUT/sample-report.html'"
 check "HTML 目录锚点齐全"   "[ \$(grep -o 'href=\"#[a-z]*\"' '$OUT/sample-report.html' | sort -u | wc -l) -eq 12 ]"
 # 目录里每个锚点都必须真有对应的 section，否则点了跳不动
 check "HTML 锚点都有对应章节" '

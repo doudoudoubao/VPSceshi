@@ -45,6 +45,95 @@ html_kv() {
 html_section() { printf '<section id="%s"><h2>%s</h2>\n' "$1" "$(html_escape "$2")"; }
 html_section_end() { printf '</section>\n'; }
 
+# ---------- 一键复制 ----------
+#
+# 把其它几种格式的全文塞进页面，配上复制按钮。这样报告页本身就是
+# 交付物：打开网页点一下就能粘到论坛/博客，不用再回服务器 cat 文件。
+# HTML_EMBED_BASE 由 write_reports 设置，指向同批报告的路径前缀。
+HTML_EMBED_BASE=""
+
+# 把文件内容塞进一个不会被执行的 script 标签
+# _embed_format <元素id> <文件路径>
+_embed_format() {
+  local id="$1" f="$2"
+  [ -r "$f" ] || return 1
+  printf '<script type="text/plain" id="%s">' "$id"
+  # script 块里唯一危险的序列是 </script，转义掉；& < 不用管，
+  # text/plain 类型的 script 内容不按 HTML 解析
+  sed 's|</script|<\\/script|gI' "$f"
+  printf '</script>\n'
+}
+
+# 复制按钮条 + 配套 JS
+html_copy_bar() {
+  [ -z "$HTML_EMBED_BASE" ] && return 0
+  local any=0
+  # 先把各格式全文嵌进来
+  _embed_format "fmt-nodeseek" "${HTML_EMBED_BASE}.nodeseek.md" && any=1
+  _embed_format "fmt-md"       "${HTML_EMBED_BASE}.md"          && any=1
+  _embed_format "fmt-bbcode"   "${HTML_EMBED_BASE}.bbcode"      && any=1
+  _embed_format "fmt-txt"      "${HTML_EMBED_BASE}.txt"         && any=1
+  _embed_format "fmt-json"     "${HTML_EMBED_BASE}.json"        && any=1
+  [ "$any" = "0" ] && return 0
+
+  cat <<'COPYEOF'
+<div class="copybar">
+  <b>一键复制</b>
+  <div class="btns">
+    <button data-fmt="fmt-nodeseek">NodeSeek 排版</button>
+    <button data-fmt="fmt-md">Markdown（博客）</button>
+    <button data-fmt="fmt-bbcode">BBCode（Discuz）</button>
+    <button data-fmt="fmt-txt">纯文本</button>
+    <button data-fmt="fmt-json">JSON</button>
+  </div>
+  <span class="tip" id="copytip"></span>
+</div>
+<script>
+(function () {
+  // clipboard API 只在 https / localhost 下可用，普通 http 页面必须有回退，
+  // 否则点了没反应。这里两条路都留着。
+  function legacyCopy(text) {
+    var ta = document.createElement('textarea');
+    ta.value = text;
+    ta.setAttribute('readonly', '');
+    ta.style.position = 'fixed';
+    ta.style.top = '-9999px';
+    document.body.appendChild(ta);
+    ta.select();
+    ta.setSelectionRange(0, ta.value.length);
+    var ok = false;
+    try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+    document.body.removeChild(ta);
+    return ok;
+  }
+  function tip(msg, bad) {
+    var el = document.getElementById('copytip');
+    el.textContent = msg;
+    el.className = 'tip' + (bad ? ' bad' : ' good');
+    clearTimeout(el._t);
+    el._t = setTimeout(function () { el.textContent = ''; el.className = 'tip'; }, 2600);
+  }
+  document.querySelectorAll('.copybar button').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var src = document.getElementById(btn.dataset.fmt);
+      if (!src) { tip('这份格式没有生成', true); return; }
+      var text = src.textContent;
+      var label = btn.textContent;
+      var done = function () { tip('已复制 ' + label + '（' + text.length + ' 字）'); };
+      if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(text).then(done, function () {
+          legacyCopy(text) ? done() : tip('复制失败，请长按手动选择', true);
+        });
+      } else {
+        legacyCopy(text) ? done() : tip('复制失败，请长按手动选择', true);
+      }
+    });
+  });
+})();
+</script>
+COPYEOF
+}
+
 # 章节未取得数据的提示块
 html_na() {
   local key="$1"
@@ -116,6 +205,18 @@ pre{background:var(--code);border:1px solid var(--line);border-radius:8px;
   padding:12px;overflow-x:auto;font-size:12.5px;line-height:1.5}
 details{margin:10px 0}
 summary{cursor:pointer;color:var(--accent);font-size:14px;padding:4px 0}
+.copybar{background:var(--card);border:1px solid var(--line);border-radius:14px;
+  padding:14px 18px;margin:0 0 20px}
+.copybar>b{font-size:14px;display:block;margin-bottom:10px}
+.copybar .btns{display:flex;flex-wrap:wrap;gap:8px}
+.copybar button{font:inherit;font-size:13px;cursor:pointer;
+  background:var(--accent);color:#fff;border:0;border-radius:8px;
+  padding:8px 14px;transition:opacity .15s}
+.copybar button:hover{opacity:.85}
+.copybar button:active{transform:translateY(1px)}
+.copybar .tip{display:inline-block;margin-top:10px;font-size:13px;min-height:1.2em}
+.copybar .tip.good{color:var(--ok)}
+.copybar .tip.bad{color:var(--no)}
 .summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1px;
   background:var(--line);border:1px solid var(--line);border-radius:14px;
   overflow:hidden;margin:0 0 20px}
@@ -188,6 +289,8 @@ CSSEOF
     done <<< "$(rows_get score)"
     printf '</div></div>\n'
   fi
+
+  html_copy_bar
 
   # ---- 目录：12 章的页面太长，给个锚点导航 ----
   printf '<nav class="toc"><b>目录</b><ol>'

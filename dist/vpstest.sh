@@ -8,7 +8,7 @@
 # 一键运行：
 #   bash <(curl -sL https://github.com/doudoudoubao/VPSceshi/raw/main/dist/vpstest.sh)
 #
-# 生成时间： 2026-09-19 16:28:39 UTC
+# 生成时间： 2026-09-20 00:55:18 UTC
 # ============================================================
 
 set -o pipefail
@@ -4153,6 +4153,95 @@ html_kv() {
 html_section() { printf '<section id="%s"><h2>%s</h2>\n' "$1" "$(html_escape "$2")"; }
 html_section_end() { printf '</section>\n'; }
 
+# ---------- 一键复制 ----------
+#
+# 把其它几种格式的全文塞进页面，配上复制按钮。这样报告页本身就是
+# 交付物：打开网页点一下就能粘到论坛/博客，不用再回服务器 cat 文件。
+# HTML_EMBED_BASE 由 write_reports 设置，指向同批报告的路径前缀。
+HTML_EMBED_BASE=""
+
+# 把文件内容塞进一个不会被执行的 script 标签
+# _embed_format <元素id> <文件路径>
+_embed_format() {
+  local id="$1" f="$2"
+  [ -r "$f" ] || return 1
+  printf '<script type="text/plain" id="%s">' "$id"
+  # script 块里唯一危险的序列是 </script，转义掉；& < 不用管，
+  # text/plain 类型的 script 内容不按 HTML 解析
+  sed 's|</script|<\\/script|gI' "$f"
+  printf '</script>\n'
+}
+
+# 复制按钮条 + 配套 JS
+html_copy_bar() {
+  [ -z "$HTML_EMBED_BASE" ] && return 0
+  local any=0
+  # 先把各格式全文嵌进来
+  _embed_format "fmt-nodeseek" "${HTML_EMBED_BASE}.nodeseek.md" && any=1
+  _embed_format "fmt-md"       "${HTML_EMBED_BASE}.md"          && any=1
+  _embed_format "fmt-bbcode"   "${HTML_EMBED_BASE}.bbcode"      && any=1
+  _embed_format "fmt-txt"      "${HTML_EMBED_BASE}.txt"         && any=1
+  _embed_format "fmt-json"     "${HTML_EMBED_BASE}.json"        && any=1
+  [ "$any" = "0" ] && return 0
+
+  cat <<'COPYEOF'
+<div class="copybar">
+  <b>一键复制</b>
+  <div class="btns">
+    <button data-fmt="fmt-nodeseek">NodeSeek 排版</button>
+    <button data-fmt="fmt-md">Markdown（博客）</button>
+    <button data-fmt="fmt-bbcode">BBCode（Discuz）</button>
+    <button data-fmt="fmt-txt">纯文本</button>
+    <button data-fmt="fmt-json">JSON</button>
+  </div>
+  <span class="tip" id="copytip"></span>
+</div>
+<script>
+(function () {
+  // clipboard API 只在 https / localhost 下可用，普通 http 页面必须有回退，
+  // 否则点了没反应。这里两条路都留着。
+  function legacyCopy(text) {
+    var ta = document.createElement('textarea');
+    ta.value = text;
+    ta.setAttribute('readonly', '');
+    ta.style.position = 'fixed';
+    ta.style.top = '-9999px';
+    document.body.appendChild(ta);
+    ta.select();
+    ta.setSelectionRange(0, ta.value.length);
+    var ok = false;
+    try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+    document.body.removeChild(ta);
+    return ok;
+  }
+  function tip(msg, bad) {
+    var el = document.getElementById('copytip');
+    el.textContent = msg;
+    el.className = 'tip' + (bad ? ' bad' : ' good');
+    clearTimeout(el._t);
+    el._t = setTimeout(function () { el.textContent = ''; el.className = 'tip'; }, 2600);
+  }
+  document.querySelectorAll('.copybar button').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var src = document.getElementById(btn.dataset.fmt);
+      if (!src) { tip('这份格式没有生成', true); return; }
+      var text = src.textContent;
+      var label = btn.textContent;
+      var done = function () { tip('已复制 ' + label + '（' + text.length + ' 字）'); };
+      if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(text).then(done, function () {
+          legacyCopy(text) ? done() : tip('复制失败，请长按手动选择', true);
+        });
+      } else {
+        legacyCopy(text) ? done() : tip('复制失败，请长按手动选择', true);
+      }
+    });
+  });
+})();
+</script>
+COPYEOF
+}
+
 # 章节未取得数据的提示块
 html_na() {
   local key="$1"
@@ -4224,6 +4313,18 @@ pre{background:var(--code);border:1px solid var(--line);border-radius:8px;
   padding:12px;overflow-x:auto;font-size:12.5px;line-height:1.5}
 details{margin:10px 0}
 summary{cursor:pointer;color:var(--accent);font-size:14px;padding:4px 0}
+.copybar{background:var(--card);border:1px solid var(--line);border-radius:14px;
+  padding:14px 18px;margin:0 0 20px}
+.copybar>b{font-size:14px;display:block;margin-bottom:10px}
+.copybar .btns{display:flex;flex-wrap:wrap;gap:8px}
+.copybar button{font:inherit;font-size:13px;cursor:pointer;
+  background:var(--accent);color:#fff;border:0;border-radius:8px;
+  padding:8px 14px;transition:opacity .15s}
+.copybar button:hover{opacity:.85}
+.copybar button:active{transform:translateY(1px)}
+.copybar .tip{display:inline-block;margin-top:10px;font-size:13px;min-height:1.2em}
+.copybar .tip.good{color:var(--ok)}
+.copybar .tip.bad{color:var(--no)}
 .summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1px;
   background:var(--line);border:1px solid var(--line);border-radius:14px;
   overflow:hidden;margin:0 0 20px}
@@ -4296,6 +4397,8 @@ CSSEOF
     done <<< "$(rows_get score)"
     printf '</div></div>\n'
   fi
+
+  html_copy_bar
 
   # ---- 目录：12 章的页面太长，给个锚点导航 ----
   printf '<nav class="toc"><b>目录</b><ol>'
@@ -5112,6 +5215,89 @@ gen_nodeseek() {
   printf '```bash\nbash <(curl -sL %s/raw/main/dist/vpstest.sh)\n```\n' "$VPSTEST_REPO"
 }
 
+# ===== 80_upload.sh =====
+# ============================================================
+# 80_upload.sh — 把 HTML 报告传到公网，拿一个可分享的链接
+#
+# 报告躺在服务器上要 cat 出来再复制，太麻烦。传上去之后打开网页，
+# 点一下按钮就能复制各种格式，直接粘到论坛。
+#
+# ⚠️ 上传 = 公开发布。链接是公开可访问的（知道链接的人都能看），
+#    而且第十二章的路由原始输出里通常带着本机首跳/网关的真实 IP，
+#    摘要里的遮蔽对它无效。所以必须用户显式 --upload 才传。
+# ============================================================
+
+ENABLE_UPLOAD=0
+UPLOAD_URL=""
+
+# 各家图床/文件站的行为不一样，关键看会不会按 text/html 渲染：
+#   catbox    按扩展名给 Content-Type，.html 能正常渲染 —— 首选
+#   0x0.st    HTML 一律当 text/plain 返回，只能看源码，作兜底
+_upload_catbox() {
+  local f="$1" u
+  u="$(run_to 120 curl -sS --connect-timeout 10 --max-time 110 \
+       -F "reqtype=fileupload" -F "fileToUpload=@${f}" \
+       "https://catbox.moe/user/api.php" 2>/dev/null)"
+  case "$u" in
+    https://*catbox*) printf '%s' "$(trim "$u")"; return 0 ;;
+  esac
+  return 1
+}
+
+_upload_0x0() {
+  local f="$1" u
+  u="$(run_to 120 curl -sS --connect-timeout 10 --max-time 110 \
+       -F "file=@${f}" "https://0x0.st" 2>/dev/null)"
+  case "$u" in
+    https://0x0.st/*) printf '%s' "$(trim "$u")"; return 0 ;;
+  esac
+  return 1
+}
+
+_upload_tempsh() {
+  local f="$1" u
+  u="$(run_to 120 curl -sS --connect-timeout 10 --max-time 110 \
+       -T "$f" "https://temp.sh/upload" 2>/dev/null)"
+  case "$u" in
+    https://temp.sh/*) printf '%s' "$(trim "$u")"; return 0 ;;
+  esac
+  return 1
+}
+
+upload_report() {
+  [ "$ENABLE_UPLOAD" = "1" ] || return 0
+  local f="${REPORT_BASE}.html"
+  [ -r "$f" ] || { log_warn "找不到 HTML 报告，跳过上传"; return 0; }
+
+  step "上传报告"
+  log_warn "上传即公开发布：链接任何人都能打开"
+  log_warn "路由原始输出里通常含本机首跳的真实 IP，摘要的遮蔽对它无效"
+
+  local size; size="$(wc -c < "$f" 2>/dev/null)"
+  log_info "文件大小 $(human_bytes "${size:-0}")，依次尝试可用的图床 ..."
+
+  local u=""
+  inline "catbox.moe"
+  u="$(_upload_catbox "$f")" && inline_done "✅" || inline_done "失败"
+  if [ -z "$u" ]; then
+    inline "temp.sh"
+    u="$(_upload_tempsh "$f")" && inline_done "✅" || inline_done "失败"
+  fi
+  if [ -z "$u" ]; then
+    inline "0x0.st"
+    u="$(_upload_0x0 "$f")" && inline_done "✅（只能看源码）" || inline_done "失败"
+  fi
+
+  if [ -n "$u" ]; then
+    UPLOAD_URL="$u"
+    kv_set meta.upload_url "$u"
+    log_ok "报告已上传：$u"
+  else
+    log_warn "所有图床都传不上去，报告仍在本地：$f"
+    log_warn "可以自己传：curl -F 'reqtype=fileupload' -F \"fileToUpload=@$f\" https://catbox.moe/user/api.php"
+  fi
+}
+
 # ===== 90_main.sh =====
 # ============================================================
 # 90_main.sh — 参数解析、主流程、报告落盘
@@ -5143,6 +5329,8 @@ ${VPSTEST_NAME} v${VPSTEST_VERSION} — VPS / 服务器一键全能测评
       --iperf             启用国际节点 iperf3 带宽测试
       --ns-no-tabs        NodeSeek 版不用标签页容器，退化成普通标题
       --no-deps           不自动安装依赖，只用系统现有工具（apt 被占用时用）
+      --upload            把 HTML 报告传到公网，拿一个可点击复制的链接
+                          ⚠️ 等于公开发布，且路由原始输出含真实首跳 IP
       --speedtest-full    测速跑满 10 个节点（默认 6 个，省时间和流量）
       --route-full        回程路由跑满 10 个目标（默认 6 个）
       --show-ip           报告中显示完整出口 IP（默认部分遮蔽）
@@ -5203,6 +5391,7 @@ parse_args() {
       --iperf)        ENABLE_IPERF=1; shift ;;
       --ns-no-tabs)   NS_USE_TABS=0; shift ;;
       --no-deps)      SKIP_DEPS=1; shift ;;
+      --upload)       ENABLE_UPLOAD=1; shift ;;
       --speedtest-full) SPEEDTEST_FULL=1; shift ;;
       --route-full)   ROUTE_FULL=1; shift ;;
       --show-ip)      MASK_IP=0; shift ;;
@@ -5273,12 +5462,14 @@ write_reports() {
   stamp="$(date '+%Y%m%d-%H%M%S')"
   base="$OUT_DIR/report-$stamp"
 
+  # HTML 要把其它格式全文嵌进去做「一键复制」，所以必须最后生成
   gen_markdown > "${base}.md"          2>/dev/null && log_ok "Markdown : ${base}.md"
   gen_nodeseek > "${base}.nodeseek.md" 2>/dev/null && log_ok "NodeSeek : ${base}.nodeseek.md"
   gen_bbcode   > "${base}.bbcode"      2>/dev/null && log_ok "BBCode   : ${base}.bbcode"
-  gen_html     > "${base}.html"        2>/dev/null && log_ok "HTML     : ${base}.html"
   gen_json     > "${base}.json"        2>/dev/null && log_ok "JSON     : ${base}.json"
   gen_txt      > "${base}.txt"         2>/dev/null && log_ok "纯文本   : ${base}.txt"
+  HTML_EMBED_BASE="$base"
+  gen_html     > "${base}.html"        2>/dev/null && log_ok "HTML     : ${base}.html"
 
   # 同时维护一份 latest.* 方便脚本化取用
   local ext
@@ -5331,6 +5522,11 @@ print_summary() {
   [ "$na_n" -gt 0 ] &&
     printf '  %s注意%s      : 有 %s 个检测项未取得数据，报告里已逐条注明原因\n' \
       "$C_Y" "$C_RST" "$na_n"
+  if [ -n "$UPLOAD_URL" ]; then
+    printf '\n  %s在线报告（打开就能一键复制各种格式）:%s\n' "$C_B$C_G" "$C_RST"
+    printf '    %s\n' "$UPLOAD_URL"
+  fi
+
   printf '\n  报告文件:\n'
   printf '    博客 Markdown  : %s.md\n'          "$REPORT_BASE"
   printf '    NodeSeek 专用  : %s.nodeseek.md\n' "$REPORT_BASE"
@@ -5385,6 +5581,7 @@ main() {
   calc_score
   build_verdict
   write_reports
+  upload_report
   print_summary
 }
 

@@ -29,6 +29,8 @@ ${VPSTEST_NAME} v${VPSTEST_VERSION} — VPS / 服务器一键全能测评
       --iperf             启用国际节点 iperf3 带宽测试
       --ns-no-tabs        NodeSeek 版不用标签页容器，退化成普通标题
       --no-deps           不自动安装依赖，只用系统现有工具（apt 被占用时用）
+      --upload            把 HTML 报告传到公网，拿一个可点击复制的链接
+                          ⚠️ 等于公开发布，且路由原始输出含真实首跳 IP
       --speedtest-full    测速跑满 10 个节点（默认 6 个，省时间和流量）
       --route-full        回程路由跑满 10 个目标（默认 6 个）
       --show-ip           报告中显示完整出口 IP（默认部分遮蔽）
@@ -89,6 +91,7 @@ parse_args() {
       --iperf)        ENABLE_IPERF=1; shift ;;
       --ns-no-tabs)   NS_USE_TABS=0; shift ;;
       --no-deps)      SKIP_DEPS=1; shift ;;
+      --upload)       ENABLE_UPLOAD=1; shift ;;
       --speedtest-full) SPEEDTEST_FULL=1; shift ;;
       --route-full)   ROUTE_FULL=1; shift ;;
       --show-ip)      MASK_IP=0; shift ;;
@@ -159,12 +162,14 @@ write_reports() {
   stamp="$(date '+%Y%m%d-%H%M%S')"
   base="$OUT_DIR/report-$stamp"
 
+  # HTML 要把其它格式全文嵌进去做「一键复制」，所以必须最后生成
   gen_markdown > "${base}.md"          2>/dev/null && log_ok "Markdown : ${base}.md"
   gen_nodeseek > "${base}.nodeseek.md" 2>/dev/null && log_ok "NodeSeek : ${base}.nodeseek.md"
   gen_bbcode   > "${base}.bbcode"      2>/dev/null && log_ok "BBCode   : ${base}.bbcode"
-  gen_html     > "${base}.html"        2>/dev/null && log_ok "HTML     : ${base}.html"
   gen_json     > "${base}.json"        2>/dev/null && log_ok "JSON     : ${base}.json"
   gen_txt      > "${base}.txt"         2>/dev/null && log_ok "纯文本   : ${base}.txt"
+  HTML_EMBED_BASE="$base"
+  gen_html     > "${base}.html"        2>/dev/null && log_ok "HTML     : ${base}.html"
 
   # 同时维护一份 latest.* 方便脚本化取用
   local ext
@@ -217,6 +222,11 @@ print_summary() {
   [ "$na_n" -gt 0 ] &&
     printf '  %s注意%s      : 有 %s 个检测项未取得数据，报告里已逐条注明原因\n' \
       "$C_Y" "$C_RST" "$na_n"
+  if [ -n "$UPLOAD_URL" ]; then
+    printf '\n  %s在线报告（打开就能一键复制各种格式）:%s\n' "$C_B$C_G" "$C_RST"
+    printf '    %s\n' "$UPLOAD_URL"
+  fi
+
   printf '\n  报告文件:\n'
   printf '    博客 Markdown  : %s.md\n'          "$REPORT_BASE"
   printf '    NodeSeek 专用  : %s.nodeseek.md\n' "$REPORT_BASE"
@@ -271,5 +281,6 @@ main() {
   calc_score
   build_verdict
   write_reports
+  upload_report
   print_summary
 }
