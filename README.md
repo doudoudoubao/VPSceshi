@@ -33,7 +33,7 @@ cd VPSceshi && bash vpstest.sh -n "我的小鸡"
 | `report-*.md` | 博客 / GitHub / Hexo / Typecho，标准 Markdown |
 | `report-*.nodeseek.md` | **[NodeSeek](https://www.nodeseek.com) 专用排版**，用论坛的标签页与折叠容器 |
 | `report-*.bbcode` | Discuz 系论坛（hostloc 等），BBCode 表格 |
-| `report-*.html` | 独立网页，自带样式与深色模式，可直接上传静态托管 |
+| `report-*.html` | 独立网页，评分环 + 规格卡片 + 状态药丸，像正经测评博客而不是数据表格 |
 | `report-*.json` | 机器可读，方便二次处理 / 入库 / 做对比 |
 | `report-*.txt` | 纯文本，贴哪都不会乱 |
 

@@ -6,60 +6,65 @@
 <title>DMIT HKG.AN5.EB.Tiny 服务器测评报告</title>
 <style>
 :root{
-  --bg:#f6f7f9; --card:#ffffff; --fg:#1f2329; --muted:#6b7280; --line:#e5e7eb;
-  --accent:#2b6cb0; --ok:#15803d; --no:#b91c1c; --warn:#b45309;
+  --bg:#f3f4f7; --card:#ffffff; --fg:#1f2329; --muted:#6b7280; --line:#e5e7eb;
+  --accent:#2b6cb0; --accent2:#7c3aed; --ok:#15803d; --no:#b91c1c; --warn:#b45309;
   --thead:#f1f5f9; --zebra:#fafbfc; --code:#f3f4f6;
 }
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
-    --bg:#0f1115; --card:#171a21; --fg:#e5e7eb; --muted:#9ca3af; --line:#262b34;
-    --accent:#63a4ff; --ok:#4ade80; --no:#f87171; --warn:#fbbf24;
-    --thead:#1e222a; --zebra:#1b1e25; --code:#11141a;
+    --bg:#0c0e13; --card:#161920; --fg:#e5e7eb; --muted:#9ca3af; --line:#262b34;
+    --accent:#63a4ff; --accent2:#a78bfa; --ok:#4ade80; --no:#f87171; --warn:#fbbf24;
+    --thead:#1c2028; --zebra:#191d24; --code:#11141a;
   }
 }
 :root[data-theme="dark"]{
-  --bg:#0f1115; --card:#171a21; --fg:#e5e7eb; --muted:#9ca3af; --line:#262b34;
-  --accent:#63a4ff; --ok:#4ade80; --no:#f87171; --warn:#fbbf24;
-  --thead:#1e222a; --zebra:#1b1e25; --code:#11141a;
+  --bg:#0c0e13; --card:#161920; --fg:#e5e7eb; --muted:#9ca3af; --line:#262b34;
+  --accent:#63a4ff; --accent2:#a78bfa; --ok:#4ade80; --no:#f87171; --warn:#fbbf24;
+  --thead:#1c2028; --zebra:#191d24; --code:#11141a;
 }
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--fg);
   font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
   line-height:1.65;font-size:15px}
 .wrap{max-width:1040px;margin:0 auto;padding:32px 16px 64px}
-header{text-align:center;margin-bottom:28px}
-header h1{font-size:26px;margin:0 0 8px;letter-spacing:.3px}
+
+/* ---- 页头 ---- */
+header{text-align:center;margin-bottom:22px}
+.kicker{display:inline-block;background:linear-gradient(135deg,var(--accent),var(--accent2));
+  color:#fff;font-size:11px;font-weight:800;letter-spacing:1px;padding:5px 14px;
+  border-radius:999px;margin-bottom:12px;text-transform:uppercase}
+header h1{font-size:25px;margin:0 0 8px;letter-spacing:.2px;font-weight:800}
 header .meta{color:var(--muted);font-size:13px}
-.score{background:var(--card);border:1px solid var(--line);border-radius:14px;
-  padding:20px;margin:0 0 24px;text-align:center}
-.score .big{font-size:40px;font-weight:700;color:var(--accent);line-height:1.1}
-.score .grade{font-size:15px;color:var(--muted);margin-top:4px}
-.bars{margin-top:16px;text-align:left}
-.bar{margin:8px 0}
-.bar .lab{display:flex;justify-content:space-between;font-size:13px;color:var(--muted);margin-bottom:3px}
-.bar .track{height:8px;background:var(--line);border-radius:6px;overflow:hidden}
-.bar .fill{height:100%;background:var(--accent);border-radius:6px}
-section{background:var(--card);border:1px solid var(--line);border-radius:14px;
-  padding:18px 20px;margin:0 0 20px}
-section h2{font-size:18px;margin:0 0 14px;padding-bottom:8px;border-bottom:2px solid var(--accent);
-  display:inline-block}
-section h3{font-size:15px;margin:18px 0 8px;color:var(--muted)}
-.tw{overflow-x:auto;-webkit-overflow-scrolling:touch}
-table{width:100%;border-collapse:collapse;font-size:14px;margin:0 0 6px}
-th,td{padding:8px 10px;border:1px solid var(--line);text-align:left;vertical-align:top;
-  word-break:break-word}
-thead th{background:var(--thead);font-weight:600;white-space:nowrap}
-tbody tr:nth-child(even){background:var(--zebra)}
-table.kv th{background:var(--thead);width:150px;white-space:nowrap}
-td.ok{color:var(--ok);font-weight:600}
-td.no{color:var(--no);font-weight:600}
-td.warn{color:var(--warn);font-weight:600}
-pre{background:var(--code);border:1px solid var(--line);border-radius:8px;
-  padding:12px;overflow-x:auto;font-size:12.5px;line-height:1.5}
-details{margin:10px 0}
-summary{cursor:pointer;color:var(--accent);font-size:14px;padding:4px 0}
+
+/* ---- 顶部关键指标 ---- */
+.summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin:20px 0}
+.summary .si{background:var(--card);border:1px solid var(--line);border-radius:14px;
+  padding:14px 10px;text-align:center;min-width:0}
+.summary .si-ic{font-size:20px;margin-bottom:5px}
+.summary .si span{display:block;color:var(--muted);font-size:11px;margin-bottom:3px}
+.summary .si b{font-size:13.5px;word-break:break-word}
+
+/* ---- 评分环 ---- */
+.scorehero{background:var(--card);border:1px solid var(--line);border-radius:18px;
+  padding:26px 20px;margin:0 0 20px;text-align:center}
+.ring{width:148px;height:148px;border-radius:50%;margin:0 auto 12px;
+  background:conic-gradient(var(--accent) calc(var(--pct)*1%), var(--line) 0);
+  display:flex;align-items:center;justify-content:center}
+.ringhole{width:116px;height:116px;border-radius:50%;background:var(--card);
+  display:flex;flex-direction:column;align-items:center;justify-content:center}
+.ringnum{font-size:34px;font-weight:800;color:var(--accent);line-height:1}
+.ringmax{font-size:11.5px;color:var(--muted);margin-top:3px}
+.gradebadge{display:inline-block;background:var(--thead);color:var(--fg);
+  font-size:14px;font-weight:800;padding:6px 18px;border-radius:999px;margin-bottom:18px}
+.scorebars{text-align:left;max-width:440px;margin:0 auto;display:grid;gap:12px}
+.sbar-lab{display:flex;justify-content:space-between;font-size:13px;color:var(--muted);margin-bottom:5px}
+.sbar-lab b{color:var(--fg);font-weight:600}
+.sbar-track{height:8px;background:var(--line);border-radius:6px;overflow:hidden}
+.sbar-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:6px}
+
+/* ---- 一键复制 ---- */
 .copybar{background:var(--card);border:1px solid var(--line);border-radius:14px;
-  padding:14px 18px;margin:0 0 20px}
+  padding:16px 18px;margin:0 0 20px}
 .copybar>b{font-size:14px;display:block;margin-bottom:10px}
 .copybar .btns{display:flex;flex-wrap:wrap;gap:8px}
 .copybar button{font:inherit;font-size:13px;cursor:pointer;
@@ -70,12 +75,8 @@ summary{cursor:pointer;color:var(--accent);font-size:14px;padding:4px 0}
 .copybar .tip{display:inline-block;margin-top:10px;font-size:13px;min-height:1.2em}
 .copybar .tip.good{color:var(--ok)}
 .copybar .tip.bad{color:var(--no)}
-.summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1px;
-  background:var(--line);border:1px solid var(--line);border-radius:14px;
-  overflow:hidden;margin:0 0 20px}
-.summary .si{background:var(--card);padding:12px 14px;min-width:0}
-.summary .si span{display:block;color:var(--muted);font-size:12px;margin-bottom:2px}
-.summary .si b{font-size:14px;word-break:break-word}
+
+/* ---- 目录 ---- */
 .toc{background:var(--card);border:1px solid var(--line);border-radius:14px;
   padding:14px 20px;margin:0 0 20px}
 .toc b{font-size:14px}
@@ -83,31 +84,112 @@ summary{cursor:pointer;color:var(--accent);font-size:14px;padding:4px 0}
 .toc li{margin:3px 0;break-inside:avoid}
 .toc a{text-decoration:none}
 .toc a:hover{text-decoration:underline}
-section{scroll-margin-top:16px}
-.na{background:color-mix(in srgb, var(--warn) 12%, transparent);
+
+/* ---- 章节 ---- */
+section{background:var(--card);border:1px solid var(--line);border-radius:16px;
+  padding:20px 20px 22px;margin:0 0 20px;scroll-margin-top:16px}
+section h2{font-size:18px;margin:0 0 16px;padding-bottom:12px;
+  border-bottom:2px solid var(--accent);display:flex;align-items:center;gap:9px;font-weight:800}
+section h2 .hico{font-size:20px}
+section h3{font-size:14px;margin:22px 0 10px;font-weight:700;
+  padding-left:10px;border-left:3px solid var(--accent);opacity:.9}
+section h3:first-of-type{margin-top:6px}
+
+/* ---- 规格卡片（一项一项列出来） ---- */
+.facts{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px;margin:12px 0}
+.fact{background:var(--thead);border-radius:10px;padding:11px 13px}
+.fact .fk{display:block;font-size:12px;color:var(--muted);margin-bottom:5px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fact .fv{display:block;font-size:14.5px;font-weight:700;word-break:break-word;line-height:1.4}
+
+/* ---- 药丸清单 ---- */
+.pillrows{display:flex;flex-direction:column;gap:1px;background:var(--line);
+  border:1px solid var(--line);border-radius:12px;overflow:hidden;margin:12px 0}
+.prow{background:var(--card);padding:10px 14px;display:flex;align-items:center;
+  justify-content:space-between;gap:12px;font-size:13.5px}
+.prow .pn{color:var(--fg);word-break:break-word}
+.prow .ptag{font-size:11px;color:var(--muted);background:var(--thead);
+  padding:2px 9px;border-radius:6px;white-space:nowrap;margin-right:auto;margin-left:8px}
+.pill{display:inline-block;padding:3px 11px;border-radius:999px;font-size:12.5px;
+  font-weight:700;white-space:nowrap;flex-shrink:0}
+.pill.ok{background:color-mix(in srgb, var(--ok) 16%, transparent);color:var(--ok)}
+.pill.no{background:color-mix(in srgb, var(--no) 16%, transparent);color:var(--no)}
+.pill.warn{background:color-mix(in srgb, var(--warn) 18%, transparent);color:var(--warn)}
+.pill.muted{background:var(--thead);color:var(--muted)}
+.pill.plain{background:var(--thead);color:var(--fg)}
+
+/* ---- 路由卡片网格 ---- */
+.routelist{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px;margin:12px 0}
+.rzitem{background:var(--thead);border-radius:10px;padding:12px 14px}
+.rz-name{font-weight:700;font-size:13.5px;margin-bottom:3px}
+.rz-ip{font-size:11px;color:var(--muted);font-family:ui-monospace,SFMono-Regular,Menlo,monospace;margin-bottom:7px}
+.rz-line{font-size:12.5px;line-height:1.5}
+
+/* ---- 适合/不适合场景卡片 ---- */
+.scenarios{display:grid;gap:10px;margin:12px 0}
+.scen{border-radius:10px;padding:12px 14px;background:var(--thead);border-left:4px solid var(--ok)}
+.scenarios.bad .scen{border-left-color:var(--warn)}
+.scen-t{font-weight:700;font-size:14px;margin-bottom:4px}
+.scen-d{font-size:13px;color:var(--muted);line-height:1.6}
+
+/* ---- FAQ 手风琴 ---- */
+.faqlist{display:flex;flex-direction:column;gap:8px;margin:12px 0}
+.faqitem{background:var(--thead);border-radius:10px;padding:2px 14px}
+.faqitem summary{font-weight:700;padding:11px 0;cursor:pointer;list-style:none;font-size:13.5px}
+.faqitem summary::-webkit-details-marker{display:none}
+.faqitem summary::before{content:'❯';color:var(--accent);display:inline-block;
+  margin-right:8px;transition:transform .15s}
+.faqitem[open] summary::before{transform:rotate(90deg)}
+.faqa{padding:0 0 14px;color:var(--muted);font-size:13.5px;line-height:1.75}
+
+/* ---- 表格（仅横向对比数据用） ---- */
+.tw{overflow-x:auto;-webkit-overflow-scrolling:touch;border-radius:12px;
+  border:1px solid var(--line);margin:12px 0}
+table{width:100%;border-collapse:collapse;font-size:13.5px}
+th,td{padding:10px 12px;border-bottom:1px solid var(--line);text-align:left;
+  vertical-align:top;word-break:break-word}
+table tr:last-child td{border-bottom:0}
+thead th{background:var(--thead);font-weight:700;white-space:nowrap}
+tbody tr:hover{background:var(--zebra)}
+td.ok{color:var(--ok);font-weight:700}
+td.no{color:var(--no);font-weight:700}
+td.warn{color:var(--warn);font-weight:700}
+
+pre{background:var(--code);border:1px solid var(--line);border-radius:8px;
+  padding:12px;overflow-x:auto;font-size:12.5px;line-height:1.5}
+details{margin:10px 0}
+summary{cursor:pointer;color:var(--accent);font-size:14px;padding:4px 0}
+.na{background:color-mix(in srgb, var(--warn) 10%, transparent);
   border-left:3px solid var(--warn);border-radius:0 8px 8px 0;
-  padding:10px 14px;margin:10px 0;font-size:14px}
+  padding:10px 14px;margin:10px 0;font-size:13.5px}
 .na code{background:var(--code);padding:1px 5px;border-radius:4px}
 footer{color:var(--muted);font-size:13px;text-align:center;margin-top:28px}
 footer code{background:var(--code);padding:2px 6px;border-radius:4px}
 a{color:var(--accent)}
+
 @media (max-width:640px){
   .wrap{padding:20px 16px 48px}
-  header h1{font-size:20px}
-  .score .big{font-size:32px}
+  header h1{font-size:19px}
+  section{padding:16px 14px 18px}
+  .ring{width:128px;height:128px}
+  .ringhole{width:100px;height:100px}
+  .ringnum{font-size:28px}
   table{font-size:13px}
-  table.kv th{width:110px}
   .toc ol{columns:1}
-  .summary{grid-template-columns:repeat(auto-fit,minmax(140px,1fr))}
+  .facts{grid-template-columns:repeat(auto-fill,minmax(140px,1fr))}
+  .routelist{grid-template-columns:1fr}
+  .summary{grid-template-columns:repeat(auto-fit,minmax(110px,1fr))}
+  .prow{flex-wrap:wrap}
 }
 </style>
 </head>
 <body>
 <div class="wrap">
-<header><h1>DMIT HKG.AN5.EB.Tiny 服务器测评报告</h1>
+<header><span class="kicker">Server Benchmark Report</span>
+<h1>DMIT HKG.AN5.EB.Tiny 服务器测评报告</h1>
 <div class="meta">测试时间：2026-09-19 16:20:31 CST ｜ 出口位置：中国香港 Hong Kong ｜ AS3335 DMIT</div></header>
-<div class="summary"><div class="si"><span>配置</span><b>1 核 / 984.27 MB / 19.56 GB</b></div><div class="si"><span>商家套餐</span><b>DMIT HKG.AN5.EB.Tiny</b></div><div class="si"><span>价格</span><b>9.90 AUD / 月付</b></div><div class="si"><span>国内延迟</span><b>39.8 ms</b></div><div class="si"><span>就近下行</span><b>946.21 Mbps</b></div><div class="si"><span>解锁通过率</span><b>25/37</b></div><div class="si"><span>IP 类型</span><b>📡 广播 IP</b></div><div class="si"><span>回程线路</span><b>CN2 GIA (AS4809/59.43)；联通 A网 CUII (AS9929)；移动 CMIN2 (AS58807)</b></div><div class="si"><span>去程线路</span><b>电信 CN2 GIA (AS4809) / 电信 163 骨干 (AS4134) / 电信 CN2 (AS4809)；联通 169 骨干 (AS4837)；移动 CMI (AS58453) / 移动 CMNET (AS9808)</b></div></div>
-<div class="score"><div class="big">86.8<span style="font-size:18px;color:var(--muted)"> / 100</span></div><div class="grade">S 级 · 优秀</div><div class="bars"><div class="bar"><div class="lab"><span>CPU 性能</span><span>18.3 / 25</span></div><div class="track"><div class="fill" style="width:73%"></div></div></div><div class="bar"><div class="lab"><span>磁盘 I/O</span><span>19.1 / 20</span></div><div class="track"><div class="fill" style="width:96%"></div></div></div><div class="bar"><div class="lab"><span>网络带宽</span><span>23.7 / 25</span></div><div class="track"><div class="fill" style="width:95%"></div></div></div><div class="bar"><div class="lab"><span>国内延迟</span><span>15.0 / 15</span></div><div class="track"><div class="fill" style="width:100%"></div></div></div><div class="bar"><div class="lab"><span>流媒体解锁</span><span>6.8 / 10</span></div><div class="track"><div class="fill" style="width:68%"></div></div></div><div class="bar"><div class="lab"><span>IP 质量</span><span>3.9 / 5</span></div><div class="track"><div class="fill" style="width:78%"></div></div></div></div></div>
+<div class="scorehero"><div class="ring" style="--pct:87"><div class="ringhole"><div class="ringnum">86.8</div><div class="ringmax">/ 100</div></div></div><div class="gradebadge">🏆 S 级 · 优秀</div><div class="scorebars"><div class="sbar"><div class="sbar-lab"><span>🧠 CPU 性能</span><b>18.3 / 25</b></div><div class="sbar-track"><div class="sbar-fill" style="width:73%"></div></div></div><div class="sbar"><div class="sbar-lab"><span>💿 磁盘 I/O</span><b>19.1 / 20</b></div><div class="sbar-track"><div class="sbar-fill" style="width:96%"></div></div></div><div class="sbar"><div class="sbar-lab"><span>🚀 网络带宽</span><b>23.7 / 25</b></div><div class="sbar-track"><div class="sbar-fill" style="width:95%"></div></div></div><div class="sbar"><div class="sbar-lab"><span>⏱️ 国内延迟</span><b>15.0 / 15</b></div><div class="sbar-track"><div class="sbar-fill" style="width:100%"></div></div></div><div class="sbar"><div class="sbar-lab"><span>🔓 流媒体解锁</span><b>6.8 / 10</b></div><div class="sbar-track"><div class="sbar-fill" style="width:68%"></div></div></div><div class="sbar"><div class="sbar-lab"><span>🛡️ IP 质量</span><b>3.9 / 5</b></div><div class="sbar-track"><div class="sbar-fill" style="width:78%"></div></div></div></div></div>
+<div class="summary"><div class="si"><div class="si-ic">🖥️</div><span>配置</span><b>1 核 / 984.27 MB / 19.56 GB</b></div><div class="si"><div class="si-ic">🏢</div><span>商家套餐</span><b>DMIT HKG.AN5.EB.Tiny</b></div><div class="si"><div class="si-ic">💰</div><span>价格</span><b>9.90 AUD / 月付</b></div><div class="si"><div class="si-ic">⏱️</div><span>国内延迟</span><b>39.8 ms</b></div><div class="si"><div class="si-ic">🚀</div><span>就近下行</span><b>946.21 Mbps</b></div><div class="si"><div class="si-ic">🔓</div><span>解锁通过率</span><b>25/37</b></div><div class="si"><div class="si-ic">🛡️</div><span>IP 类型</span><b>📡 广播 IP</b></div><div class="si"><div class="si-ic">🛰️</div><span>回程线路</span><b>CN2 GIA (AS4809/59.43)；联通 A网 CUII (AS9929)；移动 CMIN2 (AS58807)</b></div><div class="si"><div class="si-ic">📥</div><span>去程线路</span><b>电信 CN2 GIA (AS4809) / 电信 163 骨干 (AS4134) / 电信 CN2 (AS4809)；联通 169 骨干 (AS4837)；移动 CMI (AS58453) / 移动 CMNET (AS9808)</b></div></div>
 <script type="text/plain" id="fmt-nodeseek"># DMIT HKG.AN5.EB.Tiny 测评报告
 
 > **测试时间**：2026-09-19 16:20:31 CST
@@ -3056,7 +3138,7 @@ traceroute to 154.31.112.5 (154.31.112.5), 30 hops max
 }
 </script>
 <div class="copybar">
-  <b>一键复制</b>
+  <b>📋 一键复制到发帖框</b>
   <div class="btns">
     <button data-fmt="fmt-nodeseek">NodeSeek 排版</button>
     <button data-fmt="fmt-md">Markdown（博客）</button>
@@ -3109,38 +3191,38 @@ traceroute to 154.31.112.5 (154.31.112.5), 30 hops max
   });
 })();
 </script>
-<nav class="toc"><b>目录</b><ol><li><a href="#profile">基本配置核对</a></li><li><a href="#perf">性能与硬件检测</a></li><li><a href="#inbound">去程延迟</a></li><li><a href="#inroute">去程路由</a></li><li><a href="#inmtr">去程 MTR</a></li><li><a href="#netq">回程网络质量</a></li><li><a href="#route">回程路由</a></li><li><a href="#speed">网络测速</a></li><li><a href="#unlock">流媒体解锁</a></li><li><a href="#ipq">IP 质量检测</a></li><li><a href="#verdict">适用场景与建议</a></li><li><a href="#raw">原始结果归档</a></li></ol></nav>
-<section id="profile"><h2>一、基本配置核对</h2>
-<h3>商家与套餐</h3><div class="tw"><table><thead><tr><th>项目</th><th>内容</th></tr></thead><tbody><tr><td>商家</td><td>DMIT</td></tr><tr><td>套餐名</td><td>HKG.AN5.EB.Tiny</td></tr><tr><td>机房</td><td>中国香港 HKG</td></tr><tr><td>线路宣传</td><td>三网优化 / 去程直连回程 CN2 GIA</td></tr><tr><td>月流量</td><td>1TB</td></tr><tr><td>带宽</td><td>1Gbps</td></tr><tr><td>价格</td><td>9.90 AUD / 月付</td></tr></tbody></table></div>
+<nav class="toc"><b>📑 目录</b><ol><li><a href="#profile">基本配置核对</a></li><li><a href="#perf">性能与硬件检测</a></li><li><a href="#inbound">去程延迟</a></li><li><a href="#inroute">去程路由</a></li><li><a href="#inmtr">去程 MTR</a></li><li><a href="#netq">回程网络质量</a></li><li><a href="#route">回程路由</a></li><li><a href="#speed">网络测速</a></li><li><a href="#unlock">流媒体解锁</a></li><li><a href="#ipq">IP 质量检测</a></li><li><a href="#verdict">适用场景与建议</a></li><li><a href="#raw">原始结果归档</a></li></ol></nav>
+<section id="profile"><h2><span class="hico">📋</span>一、基本配置核对</h2>
+<h3>商家与套餐</h3><div class="facts"><div class="fact"><span class="fk">🏢 商家</span><span class="fv">DMIT</span></div><div class="fact"><span class="fk">🏷️ 套餐名</span><span class="fv">HKG.AN5.EB.Tiny</span></div><div class="fact"><span class="fk">🏭 机房</span><span class="fv">中国香港 HKG</span></div><div class="fact"><span class="fk">🛣️ 线路宣传</span><span class="fv">三网优化 / 去程直连回程 CN2 GIA</span></div><div class="fact"><span class="fk">📊 月流量</span><span class="fv">1TB</span></div><div class="fact"><span class="fk">🚀 带宽</span><span class="fv">1Gbps</span></div><div class="fact"><span class="fk">💰 价格</span><span class="fv">9.90 AUD / 月付</span></div></div>
 <h3>宣传配置 vs 实测配置</h3><div class="tw"><table><thead><tr><th>项目</th><th>宣传值</th><th>实测值</th><th>核对</th></tr></thead><tbody><tr><td>CPU 核数</td><td>1</td><td>1 核</td><td class="ok">✅ 相符</td></tr><tr><td>内存</td><td>1GB</td><td>984.27 MB</td><td class="warn">⚠️ 略低</td></tr><tr><td>硬盘</td><td>20GB</td><td>19.56 GB</td><td class="ok">✅ 相符</td></tr><tr><td>IPv4 数量</td><td>1</td><td>1 个</td><td class="ok">✅ 相符</td></tr><tr><td>IPv6 数量</td><td>1</td><td>1 个</td><td class="ok">✅ 相符</td></tr></tbody></table></div>
 </section>
-<section id="perf"><h2>二、性能与硬件检测</h2>
-<h3>系统与硬件信息</h3><div class="tw"><table class="kv"><tbody><tr><th>CPU 型号</th><td>Intel(R) Xeon(R) Platinum 8375C CPU @ 2.90GHz</td></tr><tr><th>CPU 核心数</th><td>1 核</td></tr><tr><th>CPU 频率</th><td>2899.9 MHz</td></tr><tr><th>CPU 缓存</th><td>L1d: 48 KiB  L2: 1.3 MiB  L3: 54 MiB</td></tr><tr><th>AES-NI</th><td>✔ 已启用</td></tr><tr><th>硬件虚拟化</th><td>✘ 未启用</td></tr><tr><th>内存总量</th><td>984.27 MB</td></tr><tr><th>内存可用</th><td>855.83 MB</td></tr><tr><th>内存 Buff/Cache</th><td>212.60 MB</td></tr><tr><th>Swap</th><td>0 B / 512.00 MB</td></tr><tr><th>硬盘空间</th><td>2.13 GB / 19.56 GB（ext4）</td></tr><tr><th>操作系统</th><td>Debian GNU/Linux 12 (bookworm)</td></tr><tr><th>系统架构</th><td>x86_64</td></tr><tr><th>内核版本</th><td>6.1.0-23-amd64</td></tr><tr><th>虚拟化类型</th><td>KVM</td></tr><tr><th>TCP 加速</th><td>bbr + fq</td></tr><tr><th>协议栈</th><td>IPv4 + IPv6</td></tr><tr><th>系统负载</th><td>0.00 0.01 0.05</td></tr><tr><th>运行时间</th><td>3 天 7 小时 12 分</td></tr></tbody></table></div><h3>CPU 性能</h3><div class="tw"><table><thead><tr><th>测试项</th><th>结果</th></tr></thead><tbody><tr><td>sysbench 单核</td><td>1462.38 events/s</td></tr><tr><td>7-Zip 综合 (1 线程)</td><td>4211 MIPS</td></tr><tr><td>OpenSSL AES-256-CBC</td><td>1382 MB/s (8KB 块)</td></tr><tr><td>Geekbench 6 单核</td><td>1688</td></tr><tr><td>Geekbench 6 多核</td><td>1702</td></tr></tbody></table></div>
-<p>Geekbench 6 完整结果：<a href="https://browser.geekbench.com/v6/cpu/12345678">https://browser.geekbench.com/v6/cpu/12345678</a></p><h3>内存性能</h3><div class="tw"><table><thead><tr><th>测试项</th><th>结果</th></tr></thead><tbody><tr><td>内存读取 (sysbench 1M)</td><td>11.82 GB/s  (12103 MB/s)</td></tr><tr><td>内存写入 (sysbench 1M)</td><td>9.47 GB/s  (9697 MB/s)</td></tr></tbody></table></div>
+<section id="perf"><h2><span class="hico">⚙️</span>二、性能与硬件检测</h2>
+<h3>系统与硬件信息</h3><div class="facts"><div class="fact"><span class="fk">🧠 CPU 型号</span><span class="fv">Intel(R) Xeon(R) Platinum 8375C CPU @ 2.90GHz</span></div><div class="fact"><span class="fk">🔢 CPU 核心数</span><span class="fv">1 核</span></div><div class="fact"><span class="fk">⚡ CPU 频率</span><span class="fv">2899.9 MHz</span></div><div class="fact"><span class="fk">🗃️ CPU 缓存</span><span class="fv">L1d: 48 KiB  L2: 1.3 MiB  L3: 54 MiB</span></div><div class="fact"><span class="fk">🔐 AES-NI</span><span class="fv">✔ 已启用</span></div><div class="fact"><span class="fk">📦 硬件虚拟化</span><span class="fv">✘ 未启用</span></div><div class="fact"><span class="fk">💾 内存总量</span><span class="fv">984.27 MB</span></div><div class="fact"><span class="fk">💾 内存可用</span><span class="fv">855.83 MB</span></div><div class="fact"><span class="fk">💾 内存 Buff/Cache</span><span class="fv">212.60 MB</span></div><div class="fact"><span class="fk">🔄 Swap</span><span class="fv">0 B / 512.00 MB</span></div><div class="fact"><span class="fk">💿 硬盘空间</span><span class="fv">2.13 GB / 19.56 GB（ext4）</span></div><div class="fact"><span class="fk">🐧 操作系统</span><span class="fv">Debian GNU/Linux 12 (bookworm)</span></div><div class="fact"><span class="fk">🏗️ 系统架构</span><span class="fv">x86_64</span></div><div class="fact"><span class="fk">⚙️ 内核版本</span><span class="fv">6.1.0-23-amd64</span></div><div class="fact"><span class="fk">📦 虚拟化类型</span><span class="fv">KVM</span></div><div class="fact"><span class="fk">🚦 TCP 加速</span><span class="fv">bbr + fq</span></div><div class="fact"><span class="fk">🌐 协议栈</span><span class="fv">IPv4 + IPv6</span></div><div class="fact"><span class="fk">📈 系统负载</span><span class="fv">0.00 0.01 0.05</span></div><div class="fact"><span class="fk">🕐 运行时间</span><span class="fv">3 天 7 小时 12 分</span></div></div><h3>CPU 性能</h3><div class="facts"><div class="fact"><span class="fk">▫️ sysbench 单核</span><span class="fv">1462.38 events/s</span></div><div class="fact"><span class="fk">▫️ 7-Zip 综合 (1 线程)</span><span class="fv">4211 MIPS</span></div><div class="fact"><span class="fk">▫️ OpenSSL AES-256-CBC</span><span class="fv">1382 MB/s (8KB 块)</span></div><div class="fact"><span class="fk">▫️ Geekbench 6 单核</span><span class="fv">1688</span></div><div class="fact"><span class="fk">▫️ Geekbench 6 多核</span><span class="fv">1702</span></div></div>
+<p>Geekbench 6 完整结果：<a href="https://browser.geekbench.com/v6/cpu/12345678">https://browser.geekbench.com/v6/cpu/12345678</a></p><h3>内存性能</h3><div class="facts"><div class="fact"><span class="fk">💾 内存读取 (sysbench 1M)</span><span class="fv">11.82 GB/s  (12103 MB/s)</span></div><div class="fact"><span class="fk">💾 内存写入 (sysbench 1M)</span><span class="fv">9.47 GB/s  (9697 MB/s)</span></div></div>
 <h3>磁盘顺序读写（dd）</h3><div class="tw"><table><thead><tr><th>块大小 × 数量</th><th>写入速度</th><th>读取速度</th></tr></thead><tbody><tr><td>1M × 1000</td><td>512 MB/s</td><td>1.1 GB/s</td></tr><tr><td>1M × 1000</td><td>498 MB/s</td><td>1.2 GB/s</td></tr><tr><td>128K × 8000</td><td>421 MB/s</td><td>903 MB/s</td></tr></tbody></table></div>
 <h3>磁盘随机读写（fio · iodepth=64）</h3><div class="tw"><table><thead><tr><th>块大小</th><th>读取</th><th>写入</th><th>合计</th></tr></thead><tbody><tr><td>4k</td><td>112.44 MB/s (28784 IOPS)</td><td>112.61 MB/s (28828 IOPS)</td><td>225.05 MB/s (57612 IOPS)</td></tr><tr><td>64k</td><td>398.21 MB/s (6371 IOPS)</td><td>400.35 MB/s (6405 IOPS)</td><td>798.56 MB/s (12776 IOPS)</td></tr><tr><td>512k</td><td>612.88 MB/s (1225 IOPS)</td><td>615.02 MB/s (1230 IOPS)</td><td>1227.90 MB/s (2455 IOPS)</td></tr><tr><td>1m</td><td>644.10 MB/s (644 IOPS)</td><td>647.33 MB/s (647 IOPS)</td><td>1291.43 MB/s (1291 IOPS)</td></tr></tbody></table></div>
 </section>
-<section id="inbound"><h2>三、去程延迟测试（国内 → VPS）</h2>
+<section id="inbound"><h2><span class="hico">📥</span>三、去程延迟测试（国内 → VPS）</h2>
 <p>样本总数：<b>25</b> 个，整体平均延迟：<b>59.3 ms</b></p><h3>分运营商汇总</h3><div class="tw"><table><thead><tr><th>运营商</th><th>样本数</th><th>平均延迟</th><th>最低（最快节点）</th><th>最高（最慢节点）</th></tr></thead><tbody><tr><td>中国电信</td><td>9</td><td>54.3 ms</td><td>32.4 ms（广州电信）</td><td>78.5 ms（沈阳电信）</td></tr><tr><td>中国联通</td><td>8</td><td>57.5 ms</td><td>35.7 ms（广州联通）</td><td>85.1 ms（哈尔滨联通）</td></tr><tr><td>中国移动</td><td>7</td><td>63.7 ms</td><td>37.2 ms（深圳移动）</td><td>108.4 ms（乌鲁木齐移动）</td></tr><tr><td>教育网</td><td>1</td><td>88.2 ms</td><td>88.2 ms（北京教育网）</td><td>88.2 ms（北京教育网）</td></tr></tbody></table></div>
 <h3>分大区汇总</h3><div class="tw"><table><thead><tr><th>大区</th><th>样本数</th><th>平均延迟</th><th>最低</th><th>最高</th></tr></thead><tbody><tr><td>华东</td><td>5</td><td>48.2 ms</td><td>44.2 ms</td><td>55.4 ms</td></tr><tr><td>华北</td><td>4</td><td>70.5 ms</td><td>58.3 ms</td><td>88.2 ms</td></tr><tr><td>华南</td><td>6</td><td>36.4 ms</td><td>32.4 ms</td><td>41.2 ms</td></tr><tr><td>华中</td><td>3</td><td>57.5 ms</td><td>52.3 ms</td><td>61.4 ms</td></tr><tr><td>西北</td><td>3</td><td>87.4 ms</td><td>71.2 ms</td><td>108.4 ms</td></tr><tr><td>西南</td><td>2</td><td>71.6 ms</td><td>68.9 ms</td><td>74.3 ms</td></tr><tr><td>东北</td><td>2</td><td>81.8 ms</td><td>78.5 ms</td><td>85.1 ms</td></tr></tbody></table></div>
 <details><summary>展开各探针节点原始数据</summary><div class="tw"><table><thead><tr><th>节点</th><th>运营商</th><th>省份/地区</th><th>大区</th><th>延迟</th></tr></thead><tbody><tr><td>广州电信</td><td>中国电信</td><td>广东</td><td>华南</td><td>32.4 ms</td></tr><tr><td>深圳电信</td><td>中国电信</td><td>广东</td><td>华南</td><td>33.1 ms</td></tr><tr><td>杭州电信</td><td>中国电信</td><td>浙江</td><td>华东</td><td>45.8 ms</td></tr><tr><td>上海电信</td><td>中国电信</td><td>上海</td><td>华东</td><td>44.2 ms</td></tr><tr><td>北京电信</td><td>中国电信</td><td>北京</td><td>华北</td><td>62.7 ms</td></tr><tr><td>武汉电信</td><td>中国电信</td><td>湖北</td><td>华中</td><td>52.3 ms</td></tr><tr><td>成都电信</td><td>中国电信</td><td>四川</td><td>西南</td><td>68.9 ms</td></tr><tr><td>西安电信</td><td>中国电信</td><td>陕西</td><td>西北</td><td>71.2 ms</td></tr><tr><td>沈阳电信</td><td>中国电信</td><td>辽宁</td><td>东北</td><td>78.5 ms</td></tr><tr><td>杭州联通</td><td>中国联通</td><td>浙江</td><td>华东</td><td>48.6 ms</td></tr><tr><td>上海联通</td><td>中国联通</td><td>上海</td><td>华东</td><td>47.1 ms</td></tr><tr><td>北京联通</td><td>中国联通</td><td>北京</td><td>华北</td><td>58.3 ms</td></tr><tr><td>广州联通</td><td>中国联通</td><td>广东</td><td>华南</td><td>35.7 ms</td></tr><tr><td>南宁联通</td><td>中国联通</td><td>广西</td><td>华南</td><td>41.2 ms</td></tr><tr><td>郑州联通</td><td>中国联通</td><td>河南</td><td>华中</td><td>61.4 ms</td></tr><tr><td>兰州联通</td><td>中国联通</td><td>甘肃</td><td>西北</td><td>82.6 ms</td></tr><tr><td>哈尔滨联通</td><td>中国联通</td><td>黑龙江</td><td>东北</td><td>85.1 ms</td></tr><tr><td>广州移动</td><td>中国移动</td><td>广东</td><td>华南</td><td>38.9 ms</td></tr><tr><td>深圳移动</td><td>中国移动</td><td>广东</td><td>华南</td><td>37.2 ms</td></tr><tr><td>上海移动</td><td>中国移动</td><td>上海</td><td>华东</td><td>55.4 ms</td></tr><tr><td>北京移动</td><td>中国移动</td><td>北京</td><td>华北</td><td>72.8 ms</td></tr><tr><td>重庆移动</td><td>中国移动</td><td>重庆</td><td>西南</td><td>74.3 ms</td></tr><tr><td>长沙移动</td><td>中国移动</td><td>湖南</td><td>华中</td><td>58.7 ms</td></tr><tr><td>乌鲁木齐移动</td><td>中国移动</td><td>新疆</td><td>西北</td><td>108.4 ms</td></tr><tr><td>北京教育网</td><td>教育网</td><td>北京</td><td>华北</td><td>88.2 ms</td></tr></tbody></table></div>
 </details></section>
-<section id="inroute"><h2>四、去程路由测试（IPIP 探针）</h2>
-<div class="tw"><table><thead><tr><th>探针节点</th><th>线路识别</th></tr></thead><tbody><tr><td>广东广州电信</td><td>电信 CN2 GIA (AS4809) / 电信 163 骨干 (AS4134) / 电信 CN2 (AS4809)</td></tr><tr><td>广西南宁电信</td><td>电信 CN2 GIA (AS4809) / 电信 163 骨干 (AS4134) / 电信 CN2 (AS4809)</td></tr><tr><td>浙江杭州电信</td><td>电信 CN2 GIA (AS4809) / 电信 163 骨干 (AS4134) / 电信 CN2 (AS4809)</td></tr><tr><td>浙江杭州联通</td><td>联通 169 骨干 (AS4837)</td></tr><tr><td>广东广州移动</td><td>移动 CMI (AS58453) / 移动 CMNET (AS9808)</td></tr><tr><td>广东深圳移动</td><td>移动 CMI (AS58453) / 移动 CMNET (AS9808)</td></tr></tbody></table></div>
+<section id="inroute"><h2><span class="hico">🗺️</span>四、去程路由测试（IPIP 探针）</h2>
+<div class="routelist"><div class="rzitem"><div class="rz-name">📍 广东广州电信</div><div class="rz-ip">电信 CN2 GIA (AS4809) / 电信 163 骨干 (AS4134) / 电信 CN2 (AS4809)</div><div class="rz-line"></div></div><div class="rzitem"><div class="rz-name">📍 广西南宁电信</div><div class="rz-ip">电信 CN2 GIA (AS4809) / 电信 163 骨干 (AS4134) / 电信 CN2 (AS4809)</div><div class="rz-line"></div></div><div class="rzitem"><div class="rz-name">📍 浙江杭州电信</div><div class="rz-ip">电信 CN2 GIA (AS4809) / 电信 163 骨干 (AS4134) / 电信 CN2 (AS4809)</div><div class="rz-line"></div></div><div class="rzitem"><div class="rz-name">📍 浙江杭州联通</div><div class="rz-ip">联通 169 骨干 (AS4837)</div><div class="rz-line"></div></div><div class="rzitem"><div class="rz-name">📍 广东广州移动</div><div class="rz-ip">移动 CMI (AS58453) / 移动 CMNET (AS9808)</div><div class="rz-line"></div></div><div class="rzitem"><div class="rz-name">📍 广东深圳移动</div><div class="rz-ip">移动 CMI (AS58453) / 移动 CMNET (AS9808)</div><div class="rz-line"></div></div></div>
 <p><b>去程线路结论：</b>电信 CN2 GIA (AS4809) / 电信 163 骨干 (AS4134) / 电信 CN2 (AS4809)；联通 169 骨干 (AS4837)；移动 CMI (AS58453) / 移动 CMNET (AS9808)</p></section>
-<section id="inmtr"><h2>五、去程 MTR</h2>
+<section id="inmtr"><h2><span class="hico">📶</span>五、去程 MTR</h2>
 <p class="na">⚠️ 本次未取得有效去程 MTR 数据，丢包与抖动未评估</p></section>
-<section id="netq"><h2>六、回程网络质量（NetQuality）</h2>
-<h3>BGP 与注册信息</h3><div class="tw"><table><thead><tr><th>项目</th><th>内容</th></tr></thead><tbody><tr><td>BGP 前缀 Prefix</td><td>154.31.112.0/24</td></tr><tr><td>Origin AS</td><td>AS3335</td></tr><tr><td>网络组织 Holder</td><td>DMIT-AS</td></tr><tr><td>宣告 IPv4 前缀数</td><td>37 条</td></tr><tr><td>宣告 IPv6 前缀数</td><td>12 条</td></tr><tr><td>注册主体 Netname</td><td>DMIT-HK-NET</td></tr><tr><td>注册地区</td><td>US</td></tr><tr><td>注册日期</td><td>2019-04-11</td></tr><tr><td>最后修改日期</td><td>2025-11-02</td></tr><tr><td>注册局 RIR</td><td>ARIN（北美）</td></tr></tbody></table></div>
-<h3>上游与对等互联</h3><div class="tw"><table><thead><tr><th>项目</th><th>内容</th></tr></thead><tbody><tr><td>上游数量 Upstream</td><td>6 个</td></tr><tr><td>下游数量 Downstream</td><td>2 个</td></tr><tr><td>PeeringDB 名称</td><td>DMIT</td></tr><tr><td>网络类型</td><td>NSP</td></tr><tr><td>覆盖范围</td><td>Global</td></tr><tr><td>互联网交换点 IXP 数量</td><td>4 个</td></tr></tbody></table></div>
-<h3>互联网交换点（IXP）</h3><div class="tw"><table><thead><tr><th>交换点</th><th>端口速率</th></tr></thead><tbody><tr><td>HKIX</td><td>10 Gbps</td></tr><tr><td>Equinix HK</td><td>10 Gbps</td></tr><tr><td>Megaport HK</td><td>10 Gbps</td></tr><tr><td>AMS-IX HK</td><td>10 Gbps</td></tr></tbody></table></div>
-<h3>本地网络策略</h3><div class="tw"><table><thead><tr><th>项目</th><th>内容</th></tr></thead><tbody><tr><td>TCP 拥塞控制算法</td><td>bbr</td></tr><tr><td>队列调度算法</td><td>fq</td></tr><tr><td>可用拥塞算法</td><td>reno cubic bbr</td></tr><tr><td>IP 转发</td><td>未开启</td></tr><tr><td>接口 MTU</td><td>1500</td></tr><tr><td>IPv6 支持</td><td class="ok">✅ 可用</td></tr></tbody></table></div>
+<section id="netq"><h2><span class="hico">🌐</span>六、回程网络质量（NetQuality）</h2>
+<h3>BGP 与注册信息</h3><div class="facts"><div class="fact"><span class="fk">🔢 BGP 前缀 Prefix</span><span class="fv">154.31.112.0/24</span></div><div class="fact"><span class="fk">🔖 Origin AS</span><span class="fv">AS3335</span></div><div class="fact"><span class="fk">▫️ 网络组织 Holder</span><span class="fv">DMIT-AS</span></div><div class="fact"><span class="fk">🔢 宣告 IPv4 前缀数</span><span class="fv">37 条</span></div><div class="fact"><span class="fk">🔢 宣告 IPv6 前缀数</span><span class="fv">12 条</span></div><div class="fact"><span class="fk">📋 注册主体 Netname</span><span class="fv">DMIT-HK-NET</span></div><div class="fact"><span class="fk">📍 注册地区</span><span class="fv">US</span></div><div class="fact"><span class="fk">📋 注册日期</span><span class="fv">2019-04-11</span></div><div class="fact"><span class="fk">▫️ 最后修改日期</span><span class="fv">2025-11-02</span></div><div class="fact"><span class="fk">📋 注册局 RIR</span><span class="fv">ARIN（北美）</span></div></div>
+<h3>上游与对等互联</h3><div class="facts"><div class="fact"><span class="fk">⬆️ 上游数量 Upstream</span><span class="fv">6 个</span></div><div class="fact"><span class="fk">⬇️ 下游数量 Downstream</span><span class="fv">2 个</span></div><div class="fact"><span class="fk">▫️ PeeringDB 名称</span><span class="fv">DMIT</span></div><div class="fact"><span class="fk">🏷️ 网络类型</span><span class="fv">NSP</span></div><div class="fact"><span class="fk">🏷️ 覆盖范围</span><span class="fv">Global</span></div><div class="fact"><span class="fk">🔀 互联网交换点 IXP 数量</span><span class="fv">4 个</span></div></div>
+<h3>互联网交换点（IXP）</h3><div class="facts"><div class="fact"><span class="fk">▫️ HKIX</span><span class="fv">10 Gbps</span></div><div class="fact"><span class="fk">▫️ Equinix HK</span><span class="fv">10 Gbps</span></div><div class="fact"><span class="fk">▫️ Megaport HK</span><span class="fv">10 Gbps</span></div><div class="fact"><span class="fk">▫️ AMS-IX HK</span><span class="fv">10 Gbps</span></div></div>
+<h3>本地网络策略</h3><div class="facts"><div class="fact"><span class="fk">🚦 TCP 拥塞控制算法</span><span class="fv">bbr</span></div><div class="fact"><span class="fk">🚦 队列调度算法</span><span class="fv">fq</span></div><div class="fact"><span class="fk">🚦 可用拥塞算法</span><span class="fv">reno cubic bbr</span></div><div class="fact"><span class="fk">➡️ IP 转发</span><span class="fv">未开启</span></div><div class="fact"><span class="fk">📏 接口 MTU</span><span class="fv">1500</span></div><div class="fact"><span class="fk">6️⃣ IPv6 支持</span><span class="fv"><span class="pill ok">✅ 可用</span></span></div></div>
 <h3>回程 MTR（丢包 / 抖动）</h3><div class="tw"><table><thead><tr><th>目标</th><th>IP</th><th>丢包率</th><th>平均延迟</th><th>最优 / 最差</th><th>抖动 StDev</th></tr></thead><tbody><tr><td>广州电信</td><td>58.60.188.222</td><td>0.0%</td><td>12.8 ms</td><td>12.1 / 14.6 ms</td><td>0.7 ms</td></tr><tr><td>上海联通</td><td>210.22.97.1</td><td>0.0%</td><td>35.4 ms</td><td>34.8 / 38.2 ms</td><td>1.1 ms</td></tr><tr><td>上海移动</td><td>211.136.112.200</td><td>1.0%</td><td>45.2 ms</td><td>44.1 / 62.7 ms</td><td>5.4 ms</td></tr></tbody></table></div>
 </section>
-<section id="route"><h2>七、回程路由测试（NextTrace 三网）</h2>
-<div class="tw"><table><thead><tr><th>目标</th><th>IP</th><th>线路识别</th></tr></thead><tbody><tr><td>北京电信</td><td>219.141.140.10</td><td>CN2 GIA (AS4809/59.43)</td></tr><tr><td>上海电信</td><td>202.96.209.133</td><td>CN2 GIA (AS4809/59.43)</td></tr><tr><td>广州电信</td><td>58.60.188.222</td><td>CN2 GIA (AS4809/59.43)</td></tr><tr><td>北京联通</td><td>202.106.195.68</td><td>联通 A网 CUII (AS9929)</td></tr><tr><td>上海联通</td><td>210.22.97.1</td><td>联通 A网 CUII (AS9929)</td></tr><tr><td>北京移动</td><td>221.183.129.101</td><td>移动 CMIN2 (AS58807)</td></tr></tbody></table></div>
+<section id="route"><h2><span class="hico">🛰️</span>七、回程路由测试（NextTrace 三网）</h2>
+<div class="routelist"><div class="rzitem"><div class="rz-name">📍 北京电信</div><div class="rz-ip">219.141.140.10</div><div class="rz-line">CN2 GIA (AS4809/59.43)</div></div><div class="rzitem"><div class="rz-name">📍 上海电信</div><div class="rz-ip">202.96.209.133</div><div class="rz-line">CN2 GIA (AS4809/59.43)</div></div><div class="rzitem"><div class="rz-name">📍 广州电信</div><div class="rz-ip">58.60.188.222</div><div class="rz-line">CN2 GIA (AS4809/59.43)</div></div><div class="rzitem"><div class="rz-name">📍 北京联通</div><div class="rz-ip">202.106.195.68</div><div class="rz-line">联通 A网 CUII (AS9929)</div></div><div class="rzitem"><div class="rz-name">📍 上海联通</div><div class="rz-ip">210.22.97.1</div><div class="rz-line">联通 A网 CUII (AS9929)</div></div><div class="rzitem"><div class="rz-name">📍 北京移动</div><div class="rz-ip">221.183.129.101</div><div class="rz-line">移动 CMIN2 (AS58807)</div></div></div>
 <p><b>回程线路结论：</b>CN2 GIA (AS4809/59.43)；联通 A网 CUII (AS9929)；移动 CMIN2 (AS58807)</p></section>
-<section id="speed"><h2>八、网络测速</h2>
+<section id="speed"><h2><span class="hico">🚀</span>八、网络测速</h2>
 <h3>国际节点带宽（iperf3）</h3><div class="tw"><table><thead><tr><th>节点</th><th>下载</th><th>上传</th><th>延迟</th></tr></thead><tbody><tr><td>新加坡 Leaseweb 10G</td><td>921.44 Mbps</td><td>887.12 Mbps</td><td>34.2 ms</td></tr><tr><td>洛杉矶 Clouvider 10G</td><td>412.88 Mbps</td><td>388.51 Mbps</td><td>152.9 ms</td></tr><tr><td>伦敦 Clouvider 10G</td><td>288.31 Mbps</td><td>265.07 Mbps</td><td>196.4 ms</td></tr><tr><td>阿姆斯特丹 Eranium 100G</td><td>301.62 Mbps</td><td>279.88 Mbps</td><td>188.7 ms</td></tr><tr><td>纽约 Leaseweb 10G</td><td>342.19 Mbps</td><td>318.44 Mbps</td><td>212.3 ms</td></tr></tbody></table></div>
 <h3>Speedtest 就近节点</h3><div class="tw"><table><thead><tr><th>节点</th><th>下载</th><th>上传</th><th>延迟</th><th>抖动</th><th>服务器</th></tr></thead><tbody><tr><td>就近节点</td><td>946.21 Mbps</td><td>912.55 Mbps</td><td>1.84 ms</td><td>0.21 ms</td><td>HKBN Hong Kong</td></tr></tbody></table></div>
 <h3>Speedtest 国际节点</h3><div class="tw"><table><thead><tr><th>节点</th><th>下载</th><th>上传</th><th>延迟</th><th>抖动</th><th>服务器</th></tr></thead><tbody><tr><td>日本 东京</td><td>878.42 Mbps</td><td>702.11 Mbps</td><td>48.33 ms</td><td>1.12 ms</td><td>IIJ Tokyo</td></tr><tr><td>新加坡 SG</td><td>812.09 Mbps</td><td>655.73 Mbps</td><td>34.18 ms</td><td>0.88 ms</td><td>StarHub Singapore</td></tr><tr><td>美国 洛杉矶</td><td>421.66 Mbps</td><td>310.24 Mbps</td><td>152.91 ms</td><td>4.07 ms</td><td>Zenlayer Los Angeles</td></tr></tbody></table></div>
@@ -3148,31 +3230,31 @@ traceroute to 154.31.112.5 (154.31.112.5), 30 hops max
 <h3>回程延迟 · 国内三网（均值 39.8 ms）</h3><div class="tw"><table><thead><tr><th>节点</th><th>线路</th><th>平均延迟</th><th>丢包率</th></tr></thead><tbody><tr><td>北京电信</td><td>电信</td><td>48.2 ms</td><td>0%</td></tr><tr><td>上海电信</td><td>电信</td><td>31.6 ms</td><td>0%</td></tr><tr><td>广州电信</td><td>电信</td><td>12.4 ms</td><td>0%</td></tr><tr><td>北京联通</td><td>联通</td><td>52.8 ms</td><td>0%</td></tr><tr><td>上海联通</td><td>联通</td><td>35.1 ms</td><td>0%</td></tr><tr><td>广州联通</td><td>联通</td><td>14.7 ms</td><td>0%</td></tr><tr><td>北京移动</td><td>移动</td><td>61.3 ms</td><td>0%</td></tr><tr><td>上海移动</td><td>移动</td><td>44.9 ms</td><td>0%</td></tr><tr><td>广州移动</td><td>移动</td><td>18.2 ms</td><td>0%</td></tr><tr><td>北京教育网</td><td>教育网</td><td>78.5 ms</td><td>0%</td></tr></tbody></table></div>
 <h3>回程延迟 · 全球节点（均值 87.0 ms）</h3><div class="tw"><table><thead><tr><th>节点</th><th>区域</th><th>平均延迟</th><th>丢包率</th></tr></thead><tbody><tr><td>香港 HKIX</td><td>亚太</td><td>1.2 ms</td><td>0%</td></tr><tr><td>日本 东京</td><td>亚太</td><td>48.6 ms</td><td>0%</td></tr><tr><td>新加坡</td><td>亚太</td><td>34.2 ms</td><td>0%</td></tr><tr><td>美国 洛杉矶</td><td>美洲</td><td>152.7 ms</td><td>0%</td></tr><tr><td>德国 法兰克福</td><td>欧洲</td><td>198.4 ms</td><td>0%</td></tr></tbody></table></div>
 </section>
-<section id="unlock"><h2>九、流媒体与在线服务解锁</h2>
-<h3>网络识别</h3><div class="tw"><table><thead><tr><th>项目</th><th>内容</th></tr></thead><tbody><tr><td>出口网络</td><td>AS3335 DMIT</td></tr><tr><td>归属组织</td><td>DMIT Cloud Services</td></tr><tr><td>IPv4 出口</td><td>154.31.*.*</td></tr><tr><td>IPv6 出口</td><td>2404:f4c0:f45::****</td></tr><tr><td>IPv4 前缀</td><td>154.31.112.0/24</td></tr></tbody></table></div>
-<h3>IPv4 结果（通过率 25/37）</h3><p>可用 <b>25</b> ｜ 不可用 <b>8</b> ｜ 待确认 <b>2</b> ｜ 难归类 <b>2</b></p><h3>✅ 可用</h3><div class="tw"><table><thead><tr><th>服务</th><th>结果</th></tr></thead><tbody><tr><td>Netflix</td><td class="ok">✅ 解锁（区域: HK）</td></tr><tr><td>Disney+</td><td class="ok">✅ 解锁（区域: HK）</td></tr><tr><td>YouTube Premium</td><td class="ok">✅ 解锁（区域: HK）</td></tr><tr><td>Amazon Prime Video</td><td class="ok">✅ 解锁（区域: HK）</td></tr><tr><td>DAZN</td><td class="ok">✅ 解锁（区域: HK）</td></tr><tr><td>Viu.com</td><td class="ok">✅ 解锁</td></tr><tr><td>Viu.TV</td><td class="ok">✅ 解锁（香港）</td></tr><tr><td>MyTVSuper</td><td class="ok">✅ 解锁（香港）</td></tr><tr><td>Now E</td><td class="ok">✅ 解锁（香港）</td></tr><tr><td>TVB Anywhere+</td><td class="ok">✅ 解锁</td></tr><tr><td>Bilibili 港澳台</td><td class="ok">✅ 解锁</td></tr><tr><td>iQiyi 海外版</td><td class="ok">✅ 解锁（intl）</td></tr><tr><td>TikTok</td><td class="ok">✅ 解锁（区域: HK）</td></tr><tr><td>ChatGPT</td><td class="ok">✅ 解锁（区域: HK）</td></tr><tr><td>Google Gemini</td><td class="ok">✅ 解锁</td></tr><tr><td>Claude AI</td><td class="ok">✅ 解锁</td></tr><tr><td>Google 搜索无验证码</td><td class="ok">✅ 正常</td></tr><tr><td>Google Play 商店地区</td><td class="ok">✅ HK</td></tr><tr><td>Apple 地区</td><td class="ok">✅ HK</td></tr><tr><td>Bing 地区</td><td class="ok">✅ HK</td></tr><tr><td>OneTrust 地区</td><td class="ok">✅ HK / HK</td></tr><tr><td>Spotify 注册</td><td class="ok">✅ 解锁（区域: HK）</td></tr><tr><td>Steam 货币区</td><td class="ok">✅ 解锁（货币区: HKD）</td></tr><tr><td>Reddit</td><td class="ok">✅ 解锁</td></tr><tr><td>维基百科访问</td><td class="ok">✅ 解锁</td></tr></tbody></table></div>
-<h3>❌ 不可用</h3><div class="tw"><table><thead><tr><th>服务</th><th>结果</th></tr></thead><tbody><tr><td>Max (HBO Max)</td><td class="no">❌ 失败</td></tr><tr><td>Paramount+</td><td class="no">❌ 失败</td></tr><tr><td>巴哈姆特動畫瘋</td><td class="no">❌ 失败</td></tr><tr><td>Bilibili 台湾限定</td><td class="no">❌ 失败</td></tr><tr><td>DMM</td><td class="no">❌ 失败</td></tr><tr><td>Hulu 日本</td><td class="no">❌ 失败</td></tr><tr><td>SonyLiv</td><td class="no">❌ 失败</td></tr><tr><td>维基百科可编辑性</td><td class="no">❌ 不可编辑（IP 段被封）</td></tr></tbody></table></div>
-<h3>⚠️ 失败 / 待确认</h3><div class="tw"><table><thead><tr><th>服务</th><th>结果</th></tr></thead><tbody><tr><td>AbemaTV</td><td class="warn">⚠️ 仅海外内容（HK）</td></tr><tr><td>SD Gundam G Generation Eternal</td><td class="warn">⚠️ 待确认</td></tr></tbody></table></div>
-<h3>ℹ️ 难归类（地区码 / CDN 等）</h3><div class="tw"><table><thead><tr><th>服务</th><th>结果</th></tr></thead><tbody><tr><td>Netflix 优选 CDN</td><td>ipv4-c003-hkg001 (Hong Kong)</td></tr><tr><td>YouTube CDN 节点</td><td>hkg07s25</td></tr></tbody></table></div>
-<details><summary>展开 IPv4 完整清单</summary><div class="tw"><table><thead><tr><th>服务</th><th>结果</th></tr></thead><tbody><tr><td>Netflix</td><td class="ok">✅ 解锁（区域: HK）</td></tr><tr><td>Netflix 优选 CDN</td><td>ipv4-c003-hkg001 (Hong Kong)</td></tr><tr><td>Disney+</td><td class="ok">✅ 解锁（区域: HK）</td></tr><tr><td>YouTube Premium</td><td class="ok">✅ 解锁（区域: HK）</td></tr><tr><td>YouTube CDN 节点</td><td>hkg07s25</td></tr><tr><td>Amazon Prime Video</td><td class="ok">✅ 解锁（区域: HK）</td></tr><tr><td>Max (HBO Max)</td><td class="no">❌ 失败</td></tr><tr><td>Paramount+</td><td class="no">❌ 失败</td></tr><tr><td>DAZN</td><td class="ok">✅ 解锁（区域: HK）</td></tr><tr><td>Viu.com</td><td class="ok">✅ 解锁</td></tr><tr><td>Viu.TV</td><td class="ok">✅ 解锁（香港）</td></tr><tr><td>MyTVSuper</td><td class="ok">✅ 解锁（香港）</td></tr><tr><td>Now E</td><td class="ok">✅ 解锁（香港）</td></tr><tr><td>TVB Anywhere+</td><td class="ok">✅ 解锁</td></tr><tr><td>巴哈姆特動畫瘋</td><td class="no">❌ 失败</td></tr><tr><td>Bilibili 港澳台</td><td class="ok">✅ 解锁</td></tr><tr><td>Bilibili 台湾限定</td><td class="no">❌ 失败</td></tr><tr><td>AbemaTV</td><td class="warn">⚠️ 仅海外内容（HK）</td></tr><tr><td>DMM</td><td class="no">❌ 失败</td></tr><tr><td>Hulu 日本</td><td class="no">❌ 失败</td></tr><tr><td>SonyLiv</td><td class="no">❌ 失败</td></tr><tr><td>iQiyi 海外版</td><td class="ok">✅ 解锁（intl）</td></tr><tr><td>SD Gundam G Generation Eternal</td><td class="warn">⚠️ 待确认</td></tr><tr><td>TikTok</td><td class="ok">✅ 解锁（区域: HK）</td></tr><tr><td>ChatGPT</td><td class="ok">✅ 解锁（区域: HK）</td></tr><tr><td>Google Gemini</td><td class="ok">✅ 解锁</td></tr><tr><td>Claude AI</td><td class="ok">✅ 解锁</td></tr><tr><td>Google 搜索无验证码</td><td class="ok">✅ 正常</td></tr><tr><td>Google Play 商店地区</td><td class="ok">✅ HK</td></tr><tr><td>Apple 地区</td><td class="ok">✅ HK</td></tr><tr><td>Bing 地区</td><td class="ok">✅ HK</td></tr><tr><td>OneTrust 地区</td><td class="ok">✅ HK / HK</td></tr><tr><td>Spotify 注册</td><td class="ok">✅ 解锁（区域: HK）</td></tr><tr><td>Steam 货币区</td><td class="ok">✅ 解锁（货币区: HKD）</td></tr><tr><td>Reddit</td><td class="ok">✅ 解锁</td></tr><tr><td>维基百科访问</td><td class="ok">✅ 解锁</td></tr><tr><td>维基百科可编辑性</td><td class="no">❌ 不可编辑（IP 段被封）</td></tr></tbody></table></div>
-</details><h3>IPv6 结果（通过率 2/3）</h3><div class="tw"><table><thead><tr><th>服务</th><th>结果</th></tr></thead><tbody><tr><td>Netflix</td><td class="ok">✅ 解锁（区域: HK）</td></tr><tr><td>YouTube Premium</td><td class="ok">✅ 解锁（区域: HK）</td></tr><tr><td>ChatGPT</td><td class="no">❌ 失败</td></tr></tbody></table></div>
+<section id="unlock"><h2><span class="hico">🔓</span>九、流媒体与在线服务解锁</h2>
+<h3>网络识别</h3><div class="facts"><div class="fact"><span class="fk">▫️ 出口网络</span><span class="fv">AS3335 DMIT</span></div><div class="fact"><span class="fk">▫️ 归属组织</span><span class="fv">DMIT Cloud Services</span></div><div class="fact"><span class="fk">4️⃣ IPv4 出口</span><span class="fv">154.31.*.*</span></div><div class="fact"><span class="fk">6️⃣ IPv6 出口</span><span class="fv">2404:f4c0:f45::****</span></div><div class="fact"><span class="fk">4️⃣ IPv4 前缀</span><span class="fv">154.31.112.0/24</span></div></div>
+<h3>IPv4 结果（通过率 25/37）</h3><p>可用 <b>25</b> ｜ 不可用 <b>8</b> ｜ 待确认 <b>2</b> ｜ 难归类 <b>2</b></p><h3>✅ 可用</h3><div class="pillrows"><div class="prow"><span class="pn">Netflix</span><span class="pill ok">✅ 解锁（区域: HK）</span></div><div class="prow"><span class="pn">Disney+</span><span class="pill ok">✅ 解锁（区域: HK）</span></div><div class="prow"><span class="pn">YouTube Premium</span><span class="pill ok">✅ 解锁（区域: HK）</span></div><div class="prow"><span class="pn">Amazon Prime Video</span><span class="pill ok">✅ 解锁（区域: HK）</span></div><div class="prow"><span class="pn">DAZN</span><span class="pill ok">✅ 解锁（区域: HK）</span></div><div class="prow"><span class="pn">Viu.com</span><span class="pill ok">✅ 解锁</span></div><div class="prow"><span class="pn">Viu.TV</span><span class="pill ok">✅ 解锁（香港）</span></div><div class="prow"><span class="pn">MyTVSuper</span><span class="pill ok">✅ 解锁（香港）</span></div><div class="prow"><span class="pn">Now E</span><span class="pill ok">✅ 解锁（香港）</span></div><div class="prow"><span class="pn">TVB Anywhere+</span><span class="pill ok">✅ 解锁</span></div><div class="prow"><span class="pn">Bilibili 港澳台</span><span class="pill ok">✅ 解锁</span></div><div class="prow"><span class="pn">iQiyi 海外版</span><span class="pill ok">✅ 解锁（intl）</span></div><div class="prow"><span class="pn">TikTok</span><span class="pill ok">✅ 解锁（区域: HK）</span></div><div class="prow"><span class="pn">ChatGPT</span><span class="pill ok">✅ 解锁（区域: HK）</span></div><div class="prow"><span class="pn">Google Gemini</span><span class="pill ok">✅ 解锁</span></div><div class="prow"><span class="pn">Claude AI</span><span class="pill ok">✅ 解锁</span></div><div class="prow"><span class="pn">Google 搜索无验证码</span><span class="pill ok">✅ 正常</span></div><div class="prow"><span class="pn">Google Play 商店地区</span><span class="pill ok">✅ HK</span></div><div class="prow"><span class="pn">Apple 地区</span><span class="pill ok">✅ HK</span></div><div class="prow"><span class="pn">Bing 地区</span><span class="pill ok">✅ HK</span></div><div class="prow"><span class="pn">OneTrust 地区</span><span class="pill ok">✅ HK / HK</span></div><div class="prow"><span class="pn">Spotify 注册</span><span class="pill ok">✅ 解锁（区域: HK）</span></div><div class="prow"><span class="pn">Steam 货币区</span><span class="pill ok">✅ 解锁（货币区: HKD）</span></div><div class="prow"><span class="pn">Reddit</span><span class="pill ok">✅ 解锁</span></div><div class="prow"><span class="pn">维基百科访问</span><span class="pill ok">✅ 解锁</span></div></div>
+<h3>❌ 不可用</h3><div class="pillrows"><div class="prow"><span class="pn">Max (HBO Max)</span><span class="pill no">❌ 失败</span></div><div class="prow"><span class="pn">Paramount+</span><span class="pill no">❌ 失败</span></div><div class="prow"><span class="pn">巴哈姆特動畫瘋</span><span class="pill no">❌ 失败</span></div><div class="prow"><span class="pn">Bilibili 台湾限定</span><span class="pill no">❌ 失败</span></div><div class="prow"><span class="pn">DMM</span><span class="pill no">❌ 失败</span></div><div class="prow"><span class="pn">Hulu 日本</span><span class="pill no">❌ 失败</span></div><div class="prow"><span class="pn">SonyLiv</span><span class="pill no">❌ 失败</span></div><div class="prow"><span class="pn">维基百科可编辑性</span><span class="pill no">❌ 不可编辑（IP 段被封）</span></div></div>
+<h3>⚠️ 待确认</h3><div class="pillrows"><div class="prow"><span class="pn">AbemaTV</span><span class="pill warn">⚠️ 仅海外内容（HK）</span></div><div class="prow"><span class="pn">SD Gundam G Generation Eternal</span><span class="pill warn">⚠️ 待确认</span></div></div>
+<h3>ℹ️ 难归类（地区码 / CDN 等）</h3><div class="pillrows"><div class="prow"><span class="pn">Netflix 优选 CDN</span><span class="pill plain">ipv4-c003-hkg001 (Hong Kong)</span></div><div class="prow"><span class="pn">YouTube CDN 节点</span><span class="pill plain">hkg07s25</span></div></div>
+<details><summary>展开 IPv4 完整清单</summary><div class="pillrows"><div class="prow"><span class="pn">Netflix</span><span class="pill ok">✅ 解锁（区域: HK）</span></div><div class="prow"><span class="pn">Netflix 优选 CDN</span><span class="pill plain">ipv4-c003-hkg001 (Hong Kong)</span></div><div class="prow"><span class="pn">Disney+</span><span class="pill ok">✅ 解锁（区域: HK）</span></div><div class="prow"><span class="pn">YouTube Premium</span><span class="pill ok">✅ 解锁（区域: HK）</span></div><div class="prow"><span class="pn">YouTube CDN 节点</span><span class="pill plain">hkg07s25</span></div><div class="prow"><span class="pn">Amazon Prime Video</span><span class="pill ok">✅ 解锁（区域: HK）</span></div><div class="prow"><span class="pn">Max (HBO Max)</span><span class="pill no">❌ 失败</span></div><div class="prow"><span class="pn">Paramount+</span><span class="pill no">❌ 失败</span></div><div class="prow"><span class="pn">DAZN</span><span class="pill ok">✅ 解锁（区域: HK）</span></div><div class="prow"><span class="pn">Viu.com</span><span class="pill ok">✅ 解锁</span></div><div class="prow"><span class="pn">Viu.TV</span><span class="pill ok">✅ 解锁（香港）</span></div><div class="prow"><span class="pn">MyTVSuper</span><span class="pill ok">✅ 解锁（香港）</span></div><div class="prow"><span class="pn">Now E</span><span class="pill ok">✅ 解锁（香港）</span></div><div class="prow"><span class="pn">TVB Anywhere+</span><span class="pill ok">✅ 解锁</span></div><div class="prow"><span class="pn">巴哈姆特動畫瘋</span><span class="pill no">❌ 失败</span></div><div class="prow"><span class="pn">Bilibili 港澳台</span><span class="pill ok">✅ 解锁</span></div><div class="prow"><span class="pn">Bilibili 台湾限定</span><span class="pill no">❌ 失败</span></div><div class="prow"><span class="pn">AbemaTV</span><span class="pill warn">⚠️ 仅海外内容（HK）</span></div><div class="prow"><span class="pn">DMM</span><span class="pill no">❌ 失败</span></div><div class="prow"><span class="pn">Hulu 日本</span><span class="pill no">❌ 失败</span></div><div class="prow"><span class="pn">SonyLiv</span><span class="pill no">❌ 失败</span></div><div class="prow"><span class="pn">iQiyi 海外版</span><span class="pill ok">✅ 解锁（intl）</span></div><div class="prow"><span class="pn">SD Gundam G Generation Eternal</span><span class="pill warn">⚠️ 待确认</span></div><div class="prow"><span class="pn">TikTok</span><span class="pill ok">✅ 解锁（区域: HK）</span></div><div class="prow"><span class="pn">ChatGPT</span><span class="pill ok">✅ 解锁（区域: HK）</span></div><div class="prow"><span class="pn">Google Gemini</span><span class="pill ok">✅ 解锁</span></div><div class="prow"><span class="pn">Claude AI</span><span class="pill ok">✅ 解锁</span></div><div class="prow"><span class="pn">Google 搜索无验证码</span><span class="pill ok">✅ 正常</span></div><div class="prow"><span class="pn">Google Play 商店地区</span><span class="pill ok">✅ HK</span></div><div class="prow"><span class="pn">Apple 地区</span><span class="pill ok">✅ HK</span></div><div class="prow"><span class="pn">Bing 地区</span><span class="pill ok">✅ HK</span></div><div class="prow"><span class="pn">OneTrust 地区</span><span class="pill ok">✅ HK / HK</span></div><div class="prow"><span class="pn">Spotify 注册</span><span class="pill ok">✅ 解锁（区域: HK）</span></div><div class="prow"><span class="pn">Steam 货币区</span><span class="pill ok">✅ 解锁（货币区: HKD）</span></div><div class="prow"><span class="pn">Reddit</span><span class="pill ok">✅ 解锁</span></div><div class="prow"><span class="pn">维基百科访问</span><span class="pill ok">✅ 解锁</span></div><div class="prow"><span class="pn">维基百科可编辑性</span><span class="pill no">❌ 不可编辑（IP 段被封）</span></div></div>
+</details><h3>IPv6 结果（通过率 2/3）</h3><div class="pillrows"><div class="prow"><span class="pn">Netflix</span><span class="pill ok">✅ 解锁（区域: HK）</span></div><div class="prow"><span class="pn">YouTube Premium</span><span class="pill ok">✅ 解锁（区域: HK）</span></div><div class="prow"><span class="pn">ChatGPT</span><span class="pill no">❌ 失败</span></div></div>
 </section>
-<section id="ipq"><h2>十、IP 质量检测</h2>
-<h3>基础画像</h3><div class="tw"><table><thead><tr><th>项目</th><th>内容</th></tr></thead><tbody><tr><td>IP 地址</td><td>154.31.*.*</td></tr><tr><td>ASN</td><td>AS3335 DMIT</td></tr><tr><td>归属组织</td><td>DMIT Cloud Services</td></tr><tr><td>运营商 ISP</td><td>DMIT</td></tr><tr><td>地理位置</td><td>中国香港 Hong Kong</td></tr><tr><td>反向解析 PTR</td><td>无</td></tr><tr><td>时区</td><td>Asia/Hong_Kong</td></tr></tbody></table></div>
-<h3>原生 / 广播判定</h3><div class="tw"><table><thead><tr><th>检测项</th><th>结果</th></tr></thead><tbody><tr><td>IP 类型判定</td><td>📡 广播 IP</td></tr><tr><td>判定依据</td><td>注册地 US，实际广播/定位在 HK</td></tr><tr><td>注册国（RDAP）</td><td>US</td></tr><tr><td>定位国（GeoIP）</td><td>HK</td></tr><tr><td>所属前缀</td><td>154.31.112.0/24</td></tr><tr><td>注册主体</td><td>DMIT-HK-NET</td></tr><tr><td>注册局 RIR</td><td>ARIN（北美）</td></tr></tbody></table></div>
-<h3>IP 类型</h3><div class="tw"><table><thead><tr><th>检测项</th><th>结果</th></tr></thead><tbody><tr><td>IDC / 机房 IP</td><td>是</td></tr><tr><td>代理 Proxy</td><td>否</td></tr><tr><td>VPN</td><td>否</td></tr><tr><td>Tor 出口节点</td><td>否</td></tr><tr><td>滥用记录 Abuser</td><td>否</td></tr><tr><td>爬虫 Crawler</td><td>否</td></tr><tr><td>ASN 类型</td><td>hosting</td></tr></tbody></table></div>
-<h3>风险评分</h3><div class="tw"><table><thead><tr><th>检测项</th><th>结果</th></tr></thead><tbody><tr><td>Scamalytics 欺诈分</td><td>12 / 100（低风险）</td></tr><tr><td>AbuseIPDB 滥用置信度</td><td>0%</td></tr><tr><td>Cloudflare 接入 POP</td><td>HKG（国家判定: HK）</td></tr></tbody></table></div>
-<h3>黑名单扫描（有效 10 个 / 正常 9 个 / 已标记 1 个 / 黑名单 0 个）</h3><div class="tw"><table><thead><tr><th>黑名单库</th><th>级别</th><th>状态</th></tr></thead><tbody><tr><td>zen.spamhaus.org</td><td>主流</td><td class="ok">✅ 正常</td></tr><tr><td>bl.spamcop.net</td><td>主流</td><td class="ok">✅ 正常</td></tr><tr><td>b.barracudacentral.org</td><td>主流</td><td class="ok">✅ 正常</td></tr><tr><td>cbl.abuseat.org</td><td>主流</td><td class="ok">✅ 正常</td></tr><tr><td>dnsbl.sorbs.net</td><td>次级</td><td class="ok">✅ 正常</td></tr><tr><td>spam.dnsbl.sorbs.net</td><td>次级</td><td class="ok">✅ 正常</td></tr><tr><td>psbl.surriel.com</td><td>次级</td><td class="ok">✅ 正常</td></tr><tr><td>ubl.unsubscore.com</td><td>次级</td><td class="ok">✅ 正常</td></tr><tr><td>all.s5h.net</td><td>次级</td><td class="ok">✅ 正常</td></tr><tr><td>dnsbl-1.uceprotect.net</td><td>次级</td><td class="warn">⚠️ 已标记</td></tr></tbody></table></div>
-<h3>出站端口与连通性</h3><div class="tw"><table><thead><tr><th>检测项</th><th>结果</th></tr></thead><tbody><tr><td>TCP 25（SMTP 明文）</td><td class="no">❌ 封锁</td></tr><tr><td>TCP 465（SMTPS）</td><td class="ok">✅ 放行</td></tr><tr><td>TCP 587（Submission）</td><td class="ok">✅ 放行</td></tr><tr><td>Google (www.google.com:443)</td><td class="ok">✅ 可达</td></tr><tr><td>GitHub (github.com:443)</td><td class="ok">✅ 可达</td></tr></tbody></table></div>
+<section id="ipq"><h2><span class="hico">🛡️</span>十、IP 质量检测</h2>
+<h3>基础画像</h3><div class="facts"><div class="fact"><span class="fk">📍 IP 地址</span><span class="fv">154.31.*.*</span></div><div class="fact"><span class="fk">🔖 ASN</span><span class="fv">AS3335 DMIT</span></div><div class="fact"><span class="fk">▫️ 归属组织</span><span class="fv">DMIT Cloud Services</span></div><div class="fact"><span class="fk">📡 运营商 ISP</span><span class="fv">DMIT</span></div><div class="fact"><span class="fk">📍 地理位置</span><span class="fv">中国香港 Hong Kong</span></div><div class="fact"><span class="fk">🔄 反向解析 PTR</span><span class="fv">无</span></div><div class="fact"><span class="fk">🕒 时区</span><span class="fv">Asia/Hong_Kong</span></div></div>
+<h3>原生 / 广播判定</h3><div class="facts"><div class="fact"><span class="fk">▫️ IP 类型判定</span><span class="fv"><span class="pill warn">📡 广播 IP</span></span></div><div class="fact"><span class="fk">▫️ 判定依据</span><span class="fv">注册地 US，实际广播/定位在 HK</span></div><div class="fact"><span class="fk">📋 注册国（RDAP）</span><span class="fv">US</span></div><div class="fact"><span class="fk">📍 定位国（GeoIP）</span><span class="fv">HK</span></div><div class="fact"><span class="fk">🔢 所属前缀</span><span class="fv">154.31.112.0/24</span></div><div class="fact"><span class="fk">📋 注册主体</span><span class="fv">DMIT-HK-NET</span></div><div class="fact"><span class="fk">📋 注册局 RIR</span><span class="fv">ARIN（北美）</span></div></div>
+<h3>IP 类型</h3><div class="pillrows"><div class="prow"><span class="pn">IDC / 机房 IP</span><span class="pill ok">是</span></div><div class="prow"><span class="pn">代理 Proxy</span><span class="pill muted">否</span></div><div class="prow"><span class="pn">VPN</span><span class="pill muted">否</span></div><div class="prow"><span class="pn">Tor 出口节点</span><span class="pill muted">否</span></div><div class="prow"><span class="pn">滥用记录 Abuser</span><span class="pill muted">否</span></div><div class="prow"><span class="pn">爬虫 Crawler</span><span class="pill muted">否</span></div><div class="prow"><span class="pn">ASN 类型</span><span class="pill plain">hosting</span></div></div>
+<h3>风险评分</h3><div class="facts"><div class="fact"><span class="fk">▫️ Scamalytics 欺诈分</span><span class="fv">12 / 100（低风险）</span></div><div class="fact"><span class="fk">▫️ AbuseIPDB 滥用置信度</span><span class="fv">0%</span></div><div class="fact"><span class="fk">▫️ Cloudflare 接入 POP</span><span class="fv">HKG（国家判定: HK）</span></div></div>
+<h3>黑名单扫描（有效 10 个 / 正常 9 个 / 已标记 1 个 / 黑名单 0 个）</h3><div class="pillrows"><div class="prow"><span class="pn">zen.spamhaus.org</span><span class="ptag">主流</span><span class="pill ok">✅ 正常</span></div><div class="prow"><span class="pn">bl.spamcop.net</span><span class="ptag">主流</span><span class="pill ok">✅ 正常</span></div><div class="prow"><span class="pn">b.barracudacentral.org</span><span class="ptag">主流</span><span class="pill ok">✅ 正常</span></div><div class="prow"><span class="pn">cbl.abuseat.org</span><span class="ptag">主流</span><span class="pill ok">✅ 正常</span></div><div class="prow"><span class="pn">dnsbl.sorbs.net</span><span class="ptag">次级</span><span class="pill ok">✅ 正常</span></div><div class="prow"><span class="pn">spam.dnsbl.sorbs.net</span><span class="ptag">次级</span><span class="pill ok">✅ 正常</span></div><div class="prow"><span class="pn">psbl.surriel.com</span><span class="ptag">次级</span><span class="pill ok">✅ 正常</span></div><div class="prow"><span class="pn">ubl.unsubscore.com</span><span class="ptag">次级</span><span class="pill ok">✅ 正常</span></div><div class="prow"><span class="pn">all.s5h.net</span><span class="ptag">次级</span><span class="pill ok">✅ 正常</span></div><div class="prow"><span class="pn">dnsbl-1.uceprotect.net</span><span class="ptag">次级</span><span class="pill warn">⚠️ 已标记</span></div></div>
+<h3>出站端口与连通性</h3><div class="pillrows"><div class="prow"><span class="pn">TCP 25（SMTP 明文）</span><span class="pill no">❌ 封锁</span></div><div class="prow"><span class="pn">TCP 465（SMTPS）</span><span class="pill ok">✅ 放行</span></div><div class="prow"><span class="pn">TCP 587（Submission）</span><span class="pill ok">✅ 放行</span></div><div class="prow"><span class="pn">Google (www.google.com:443)</span><span class="pill ok">✅ 可达</span></div><div class="prow"><span class="pn">GitHub (github.com:443)</span><span class="pill ok">✅ 可达</span></div></div>
 <p><b>综合判断：</b>📡 广播 IP——注册地 US，实际广播/定位在 HK</p></section>
-<section id="verdict"><h2>十一、适用场景与购买建议</h2>
-<h3>适合的场景</h3><div class="tw"><table><thead><tr><th>场景</th><th>依据</th></tr></thead><tbody><tr><td>国内访问的网站 / 面板 / 小型服务</td><td>国内三网平均延迟 39.8 ms，交互体验顺畅</td></tr><tr><td>大流量下载 / 分发 / 备份</td><td>就近节点下行 946.21 Mbps，带宽充裕</td></tr><tr><td>数据库 / 频繁读写的应用</td><td>磁盘顺序写均值 477 MB/s</td></tr><tr><td>流媒体解锁自用</td><td>Netflix / Disney+ 等主流平台已解锁</td></tr><tr><td>AI 服务访问</td><td>ChatGPT / Claude 等 AI 服务可用</td></tr><tr><td>容器 / 多服务共存</td><td>内存 984.27 MB，余量充足</td></tr></tbody></table></div>
-<h3>不适合的场景</h3><div class="tw"><table><thead><tr><th>场景</th><th>依据</th></tr></thead><tbody><tr><td>多线程并发计算</td><td>仅 1 核，多线程无收益</td></tr><tr><td>严格校验 IP 归属地的服务</td><td>IP 为广播段，注册地与定位地不一致</td></tr></tbody></table></div>
-<h3>价格与线路建议</h3><div class="tw"><table><thead><tr><th>项目</th><th>内容</th></tr></thead><tbody><tr><td>价格</td><td>9.90 AUD / 月付</td></tr><tr><td>流量单价</td><td>0.0097 AUD / GB（9.90 AUD / 月付 ÷ 1TB）</td></tr><tr><td>回程线路结论</td><td>CN2 GIA (AS4809/59.43)；联通 A网 CUII (AS9929)；移动 CMIN2 (AS58807)</td></tr><tr><td>去程线路结论</td><td>电信 CN2 GIA (AS4809) / 电信 163 骨干 (AS4134) / 电信 CN2 (AS4809)；联通 169 骨干 (AS4837)；移动 CMI (AS58453) / 移动 CMNET (AS9808)</td></tr><tr><td>国内延迟（回程 ping）</td><td>平均 39.8 ms</td></tr><tr><td>国内延迟（去程探针）</td><td>平均 59.3 ms，25 个样本</td></tr><tr><td>使用建议</td><td>回程走 CN2 GIA，晚高峰相对稳，适合看重国内体验的用户；（去程为：电信 CN2 GIA (AS4809) / 电信 163 骨干 (AS4134) / 电信 CN2 (AS4809)；联通 169 骨干 (AS4837)；移动 CMI (AS58453) / 移动 CMNET (AS9808)）延迟与带宽都不错，按标价买不亏。</td></tr></tbody></table></div>
-<h3>FAQ</h3><div class="tw"><table><thead><tr><th>问题</th><th>回答</th></tr></thead><tbody><tr><td>这个 IP 是原生还是广播？</td><td>📡 广播 IP。注册地 US，实际广播/定位在 HK</td></tr><tr><td>能解锁港区流媒体吗？</td><td>可用：Netflix Disney+ Viu MyTVSuper NowE 。完整结果见流媒体解锁章节。</td></tr><tr><td>回程走的是什么线路？</td><td>CN2 GIA (AS4809/59.43)；联通 A网 CUII (AS9929)；移动 CMIN2 (AS58807)</td></tr><tr><td>去程走的是什么线路？</td><td>电信 CN2 GIA (AS4809) / 电信 163 骨干 (AS4134) / 电信 CN2 (AS4809)；联通 169 骨干 (AS4837)；移动 CMI (AS58453) / 移动 CMNET (AS9808)</td></tr><tr><td>性能够用吗？</td><td>CPU Intel(R) Xeon(R) Platinum 8375C CPU @ 2.90GHz × 1 核，单核 sysbench 1462.38 events/s；磁盘顺序写 477 MB/s。评分 CPU 18.3/25、磁盘 19.1/20。</td></tr><tr><td>适合谁买？</td><td>国内访问的网站 / 面板 / 小型服务、大流量下载 / 分发 / 备份、数据库 / 频繁读写的应用、流媒体解锁自用、AI 服务访问、容器 / 多服务共存</td></tr><tr><td>这些数据会变吗？</td><td>会。测速和路由受时段、对端负载、运营商策略影响很大，晚高峰和凌晨可能差一倍以上；流媒体解锁随 IP 段策略随时会变。本报告只代表 2026-09-19 16:20:31 CST 这一次的测试结果，建议不同时段多测几次。</td></tr></tbody></table></div>
+<section id="verdict"><h2><span class="hico">💡</span>十一、适用场景与购买建议</h2>
+<h3>适合的场景</h3><div class="scenarios good"><div class="scen"><div class="scen-t">✅ 国内访问的网站 / 面板 / 小型服务</div><div class="scen-d">国内三网平均延迟 39.8 ms，交互体验顺畅</div></div><div class="scen"><div class="scen-t">✅ 大流量下载 / 分发 / 备份</div><div class="scen-d">就近节点下行 946.21 Mbps，带宽充裕</div></div><div class="scen"><div class="scen-t">✅ 数据库 / 频繁读写的应用</div><div class="scen-d">磁盘顺序写均值 477 MB/s</div></div><div class="scen"><div class="scen-t">✅ 流媒体解锁自用</div><div class="scen-d">Netflix / Disney+ 等主流平台已解锁</div></div><div class="scen"><div class="scen-t">✅ AI 服务访问</div><div class="scen-d">ChatGPT / Claude 等 AI 服务可用</div></div><div class="scen"><div class="scen-t">✅ 容器 / 多服务共存</div><div class="scen-d">内存 984.27 MB，余量充足</div></div></div>
+<h3>不适合的场景</h3><div class="scenarios bad"><div class="scen"><div class="scen-t">⚠️ 多线程并发计算</div><div class="scen-d">仅 1 核，多线程无收益</div></div><div class="scen"><div class="scen-t">⚠️ 严格校验 IP 归属地的服务</div><div class="scen-d">IP 为广播段，注册地与定位地不一致</div></div></div>
+<h3>价格与线路建议</h3><div class="facts"><div class="fact"><span class="fk">💰 价格</span><span class="fv">9.90 AUD / 月付</span></div><div class="fact"><span class="fk">📊 流量单价</span><span class="fv">0.0097 AUD / GB（9.90 AUD / 月付 ÷ 1TB）</span></div><div class="fact"><span class="fk">🛰️ 回程线路结论</span><span class="fv">CN2 GIA (AS4809/59.43)；联通 A网 CUII (AS9929)；移动 CMIN2 (AS58807)</span></div><div class="fact"><span class="fk">🛰️ 去程线路结论</span><span class="fv">电信 CN2 GIA (AS4809) / 电信 163 骨干 (AS4134) / 电信 CN2 (AS4809)；联通 169 骨干 (AS4837)；移动 CMI (AS58453) / 移动 CMNET (AS9808)</span></div><div class="fact"><span class="fk">⏱️ 国内延迟（回程 ping）</span><span class="fv">平均 39.8 ms</span></div><div class="fact"><span class="fk">⏱️ 国内延迟（去程探针）</span><span class="fv">平均 59.3 ms，25 个样本</span></div><div class="fact"><span class="fk">💡 使用建议</span><span class="fv">回程走 CN2 GIA，晚高峰相对稳，适合看重国内体验的用户；（去程为：电信 CN2 GIA (AS4809) / 电信 163 骨干 (AS4134) / 电信 CN2 (AS4809)；联通 169 骨干 (AS4837)；移动 CMI (AS58453) / 移动 CMNET (AS9808)）延迟与带宽都不错，按标价买不亏。</span></div></div>
+<h3>FAQ</h3><div class="faqlist"><details class="faqitem"><summary>这个 IP 是原生还是广播？</summary><div class="faqa">📡 广播 IP。注册地 US，实际广播/定位在 HK</div></details><details class="faqitem"><summary>能解锁港区流媒体吗？</summary><div class="faqa">可用：Netflix Disney+ Viu MyTVSuper NowE 。完整结果见流媒体解锁章节。</div></details><details class="faqitem"><summary>回程走的是什么线路？</summary><div class="faqa">CN2 GIA (AS4809/59.43)；联通 A网 CUII (AS9929)；移动 CMIN2 (AS58807)</div></details><details class="faqitem"><summary>去程走的是什么线路？</summary><div class="faqa">电信 CN2 GIA (AS4809) / 电信 163 骨干 (AS4134) / 电信 CN2 (AS4809)；联通 169 骨干 (AS4837)；移动 CMI (AS58453) / 移动 CMNET (AS9808)</div></details><details class="faqitem"><summary>性能够用吗？</summary><div class="faqa">CPU Intel(R) Xeon(R) Platinum 8375C CPU @ 2.90GHz × 1 核，单核 sysbench 1462.38 events/s；磁盘顺序写 477 MB/s。评分 CPU 18.3/25、磁盘 19.1/20。</div></details><details class="faqitem"><summary>适合谁买？</summary><div class="faqa">国内访问的网站 / 面板 / 小型服务、大流量下载 / 分发 / 备份、数据库 / 频繁读写的应用、流媒体解锁自用、AI 服务访问、容器 / 多服务共存</div></details><details class="faqitem"><summary>这些数据会变吗？</summary><div class="faqa">会。测速和路由受时段、对端负载、运营商策略影响很大，晚高峰和凌晨可能差一倍以上；流媒体解锁随 IP 段策略随时会变。本报告只代表 2026-09-19 16:20:31 CST 这一次的测试结果，建议不同时段多测几次。</div></details></div>
 </section>
-<section id="raw"><h2>十二、原始结果归档</h2>
-<div class="tw"><table class="kv"><tbody><tr><th>测试开始时间</th><td>2026-09-19 16:20:31 CST（2026-09-19 08:20:31 UTC）</td></tr><tr><th>总耗时</th><td>14 分 08 秒</td></tr><tr><th>采集工具</th><td>VPSceshi v1.0.0</td></tr><tr><th>依赖情况</th><td>可用: curl wget bc jq sysbench fio ping dig tar</td></tr></tbody></table></div><details><summary>展开全部原始输出（共 7 段）</summary><h3>回程路由 · 上海电信 (202.96.209.133)</h3><pre>traceroute to 202.96.209.133, 30 hops max
+<section id="raw"><h2><span class="hico">🗄️</span>十二、原始结果归档</h2>
+<div class="facts"><div class="fact"><span class="fk">▫️ 测试开始时间</span><span class="fv">2026-09-19 16:20:31 CST（2026-09-19 08:20:31 UTC）</span></div><div class="fact"><span class="fk">▫️ 总耗时</span><span class="fv">14 分 08 秒</span></div><div class="fact"><span class="fk">▫️ 采集工具</span><span class="fv">VPSceshi v1.0.0</span></div><div class="fact"><span class="fk">▫️ 依赖情况</span><span class="fv">可用: curl wget bc jq sysbench fio ping dig tar</span></div></div><details><summary>展开全部原始输出（共 7 段）</summary><h3>回程路由 · 上海电信 (202.96.209.133)</h3><pre>traceroute to 202.96.209.133, 30 hops max
  1  10.0.0.1                        0.42 ms  AS*     局域网
  2  154.31.112.1                    0.88 ms  AS3335  中国 香港 DMIT
  3  59.43.187.29                    2.14 ms  AS4809  中国 香港 电信 CN2

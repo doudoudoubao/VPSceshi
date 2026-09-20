@@ -387,6 +387,16 @@ check "HTML 有复制按钮条"   "grep -q 'class=\"copybar\"' '$OUT/sample-repo
 check "HTML 嵌入 5 种格式"  "[ \$(grep -o 'id=\"fmt-[a-z]*\"' '$OUT/sample-report.html' | sort -u | wc -l) -eq 5 ]"
 check "HTML script 标签配对" "[ \$(grep -c '<script' '$OUT/sample-report.html') -eq \$(grep -c '</script>' '$OUT/sample-report.html') ]"
 check "复制有非安全上下文回退" "grep -q 'execCommand' '$OUT/sample-report.html'"
+# 新设计语言：规格卡片、药丸清单、评分环、场景卡片、FAQ 手风琴
+check "HTML 有规格卡片"     "grep -q 'class=\"facts\"' '$OUT/sample-report.html'"
+check "HTML 有药丸清单"     "grep -q 'class=\"pillrows\"' '$OUT/sample-report.html'"
+check "HTML 有状态药丸"     "grep -q 'class=\"pill ' '$OUT/sample-report.html'"
+check "HTML 有评分环"       "grep -q 'class=\"ring\"' '$OUT/sample-report.html'"
+check "HTML 有路由卡片"     "grep -q 'class=\"routelist\"' '$OUT/sample-report.html'"
+check "HTML 有场景卡片"     "grep -q 'class=\"scenarios' '$OUT/sample-report.html'"
+check "HTML 有 FAQ 手风琴"  "grep -q 'class=\"faqlist\"' '$OUT/sample-report.html'"
+check "HTML 无残留 kv 表格" "! grep -q 'class=\"kv\"' '$OUT/sample-report.html'"
+check "HTML div 标签配对"   "[ \$(grep -o '<div' '$OUT/sample-report.html' | wc -l) -eq \$(grep -o '</div>' '$OUT/sample-report.html' | wc -l) ]"
 check "HTML 目录锚点齐全"   "[ \$(grep -o 'href=\"#[a-z]*\"' '$OUT/sample-report.html' | sort -u | wc -l) -eq 12 ]"
 # 目录里每个锚点都必须真有对应的 section，否则点了跳不动
 check "HTML 锚点都有对应章节" '
