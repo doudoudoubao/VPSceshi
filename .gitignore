@@ -1,0 +1,17 @@
+# 测试结果输出目录
+vpstest-result/
+report-*.md
+report-*.bbcode
+report-*.html
+report-*.json
+report-*.txt
+latest.*
+
+# 脚本运行时的临时文件
+.vpstest_dd
+.vpstest_fio
+vpstest-bin.*
+
+# 系统
+.DS_Store
+*.swp
